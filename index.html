@@ -1,0 +1,666 @@
+<title>Chabda GBEMETONOU</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=JetBrains+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,300..500&display=swap">
+
+<style>
+/* ─────────────  tokens  ───────────── */
+:root{
+  --ground:#EEF1F6; --surface:#FFFFFF; --surface-2:#E3E8F1; --surface-3:#DCE3EE;
+  --ink:#121A2B; --ink-2:#4A576F; --ink-3:#6E7C95;
+  --line:#D1DAE7; --line-strong:#B9C5D6;
+  --accent:#A96C15; --accent-ink:#8A5710; --accent-wash:rgba(224,162,80,.13);
+  --teal:#186E7C;
+  --shadow:0 1px 2px rgba(18,26,43,.06),0 8px 26px -14px rgba(18,26,43,.28);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0C1220; --surface:#131C2E; --surface-2:#1B2639; --surface-3:#22304A;
+    --ink:#E8EDF6; --ink-2:#9CAAC1; --ink-3:#7C8BA5;
+    --line:#243149; --line-strong:#33425E;
+    --accent:#E0A250; --accent-ink:#EFBB76; --accent-wash:rgba(224,162,80,.12);
+    --teal:#56B9C7;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0C1220; --surface:#131C2E; --surface-2:#1B2639; --surface-3:#22304A;
+  --ink:#E8EDF6; --ink-2:#9CAAC1; --ink-3:#7C8BA5;
+  --line:#243149; --line-strong:#33425E;
+  --accent:#E0A250; --accent-ink:#EFBB76; --accent-wash:rgba(224,162,80,.12);
+  --teal:#56B9C7;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px -18px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Newsreader",Georgia,"Times New Roman",serif;
+  font-size:17px; line-height:1.65; font-weight:400;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{
+  font-family:"Archivo","Helvetica Neue",Arial,sans-serif;
+  font-variation-settings:"wdth" 118,"wght" 700;
+  margin:0; line-height:1.04; letter-spacing:-.015em; text-wrap:balance;
+}
+p{margin:0}
+a{color:inherit}
+
+.mono{
+  font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.72rem; letter-spacing:.06em; text-transform:uppercase; font-weight:500;
+}
+.wrap{width:min(1140px,100% - 2.6rem); margin-inline:auto}
+
+/* ─────────────  hero : viewport de rendu (toujours sombre)  ───────────── */
+.hero{
+  position:relative; isolation:isolate; overflow:hidden;
+  background:linear-gradient(180deg,#0A1020 0%,#0E1729 55%,#141d2e 100%);
+  color:#EAF0FA; border-bottom:1px solid rgba(224,162,80,.28);
+}
+.hero canvas{position:absolute; inset:0; width:100%; height:100%; display:block; z-index:-1}
+.hero__inner{
+  display:flex; flex-direction:column; gap:2.2rem;
+  padding-block:clamp(3.4rem,11vh,6.4rem) clamp(2rem,5vh,3rem);
+  min-height:min(88vh,780px); justify-content:flex-end;
+}
+.eyebrow{display:flex; align-items:center; gap:.6rem; color:#E0A250}
+.dot{width:7px; height:7px; border-radius:50%; background:#E0A250; box-shadow:0 0 0 4px rgba(224,162,80,.18)}
+.hero h1{
+  font-size:clamp(2.9rem,10.5vw,7.4rem);
+  font-variation-settings:"wdth" 122,"wght" 700;
+  letter-spacing:-.03em; margin:0;
+}
+.hero h1 .last{display:block; color:#E0A250}
+.hero__lede{
+  max-width:60ch; font-size:clamp(1.05rem,1.9vw,1.3rem);
+  color:#C3CFE2; font-weight:300; line-height:1.6;
+}
+.hero__lede strong{color:#EAF0FA; font-weight:500}
+.hero__meta{display:flex; flex-wrap:wrap; gap:.55rem 1.6rem; align-items:center}
+.hero__meta a{
+  color:#EAF0FA; text-decoration:none; border-bottom:1px solid rgba(224,162,80,.5);
+  padding-bottom:2px; transition:border-color .18s,color .18s;
+}
+.hero__meta a:hover{color:#E0A250; border-color:#E0A250}
+.hero__caption{
+  color:#7E8DA6; border-top:1px solid rgba(255,255,255,.09);
+  padding-top:.85rem; text-transform:none; letter-spacing:.02em;
+}
+
+/* ─────────────  sections  ───────────── */
+section{padding-block:clamp(3.4rem,8vw,5.6rem)}
+.sec-head{display:flex; flex-direction:column; gap:.7rem; margin-bottom:2.6rem; max-width:62ch}
+.sec-head .mono{color:var(--accent)}
+.sec-head h2{font-size:clamp(1.75rem,4.2vw,2.65rem); font-variation-settings:"wdth" 116,"wght" 700}
+.sec-head p{color:var(--ink-2); font-weight:300; font-size:1.06rem}
+
+/* domaines */
+.domains{display:grid; grid-template-columns:repeat(auto-fit,minmax(268px,1fr)); gap:1.5rem}
+.domain{
+  background:var(--surface); border:1px solid var(--line); border-radius:3px;
+  padding:1.6rem 1.5rem; display:flex; flex-direction:column; gap:.75rem;
+  border-top:2px solid var(--accent); box-shadow:var(--shadow);
+}
+.domain h3{font-size:1.16rem; font-variation-settings:"wdth" 112,"wght" 650}
+.domain p{color:var(--ink-2); font-size:1rem; font-weight:300}
+.domain .proof{
+  margin-top:auto; padding-top:.9rem; border-top:1px solid var(--line);
+  color:var(--ink-3); text-transform:none; letter-spacing:.02em; font-size:.78rem;
+}
+
+/* chiffres */
+.figures{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  border:1px solid var(--line); background:var(--surface); border-radius:3px; overflow:hidden;
+}
+.fig{padding:1.5rem 1.4rem; border-right:1px solid var(--line); display:flex; flex-direction:column; gap:.3rem}
+.fig:last-child{border-right:0}
+.fig b{
+  font-family:"Archivo",sans-serif; font-variation-settings:"wdth" 118,"wght" 700;
+  font-size:2.1rem; line-height:1; font-variant-numeric:tabular-nums; color:var(--ink);
+}
+.fig span{color:var(--ink-3); text-transform:none; letter-spacing:.02em; font-size:.78rem; line-height:1.4}
+
+/* projet phare */
+.flag{
+  border:1px solid var(--line-strong); border-radius:3px; overflow:hidden;
+  background:var(--surface); box-shadow:var(--shadow);
+}
+.flag__top{
+  padding:1.9rem clamp(1.3rem,3vw,2.3rem); background:var(--surface-2);
+  border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:.85rem;
+}
+.flag__top .code{color:var(--accent)}
+.flag__top h3{font-size:clamp(1.7rem,4.5vw,2.4rem); font-variation-settings:"wdth" 120,"wght" 700}
+.flag__top p{color:var(--ink-2); max-width:66ch; font-weight:300}
+.parts{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.part{padding:1.6rem clamp(1.3rem,3vw,2.3rem); border-right:1px solid var(--line); display:flex; flex-direction:column; gap:.6rem}
+.part:last-child{border-right:0}
+.part h4{font-size:1.02rem; font-variation-settings:"wdth" 110,"wght" 650}
+.part .tag{color:var(--teal); letter-spacing:.08em}
+.part p{color:var(--ink-2); font-size:.98rem; font-weight:300}
+
+/* liste de projets */
+.legend{
+  color:var(--ink-3); text-transform:none; letter-spacing:.02em; font-size:.8rem;
+  margin-bottom:1.6rem; padding-left:.9rem; border-left:2px solid var(--accent);
+}
+.rows{display:flex; flex-direction:column; border-top:1px solid var(--line)}
+.row{
+  display:grid; grid-template-columns:minmax(130px,150px) 1fr minmax(190px,240px);
+  gap:1.2rem 1.8rem; padding:1.5rem 0; border-bottom:1px solid var(--line);
+  align-items:start; transition:background .16s;
+}
+.row:hover{background:var(--accent-wash)}
+.row .code{color:var(--accent); padding-top:.3rem; word-break:break-word}
+.row h3{font-size:1.22rem; font-variation-settings:"wdth" 112,"wght" 650; margin-bottom:.35rem}
+.row p{color:var(--ink-2); font-size:1rem; font-weight:300; max-width:62ch}
+.stack{display:flex; flex-wrap:wrap; gap:.4rem; padding-top:.25rem}
+.chip{
+  font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.04em;
+  padding:.22rem .5rem; border:1px solid var(--line-strong); border-radius:2px;
+  color:var(--ink-2); background:var(--surface); white-space:nowrap;
+}
+.when{color:var(--ink-3); font-size:.86rem; font-weight:300; font-style:italic}
+
+/* parcours */
+.track{display:flex; flex-direction:column; gap:0; border-left:2px solid var(--line-strong); padding-left:1.6rem}
+.stop{padding-block:1.15rem; position:relative}
+.stop::before{
+  content:""; position:absolute; left:calc(-1.6rem - 6px); top:1.55rem;
+  width:10px; height:10px; border-radius:50%; background:var(--ground); border:2px solid var(--accent);
+}
+.stop h3{font-size:1.1rem; font-variation-settings:"wdth" 110,"wght" 650}
+.stop .org{color:var(--ink-2); font-weight:300}
+.stop .when{display:block; margin-bottom:.2rem}
+
+/* compétences */
+.skills{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:2rem 2.6rem}
+.skillgroup h4{font-size:.98rem; font-variation-settings:"wdth" 110,"wght" 650; margin-bottom:.85rem; padding-bottom:.5rem; border-bottom:1px solid var(--line)}
+.skillgroup .stack{padding-top:0}
+.aside{
+  margin-top:2.6rem; padding:1.5rem; background:var(--surface); border:1px solid var(--line);
+  border-radius:3px; display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1.4rem;
+}
+.aside div p{color:var(--ink-2); font-weight:300; font-size:.98rem}
+.aside .mono{color:var(--accent); display:block; margin-bottom:.4rem}
+
+/* contact */
+.contact{background:var(--surface-2); border-top:1px solid var(--line)}
+.contact h2{font-size:clamp(1.9rem,5vw,3rem); font-variation-settings:"wdth" 120,"wght" 700; margin-bottom:1rem}
+.contact p{color:var(--ink-2); font-weight:300; max-width:56ch; margin-bottom:2rem}
+.links{display:flex; flex-wrap:wrap; gap:.7rem}
+.link{
+  display:inline-flex; align-items:center; gap:.5rem; text-decoration:none;
+  padding:.7rem 1.1rem; border:1px solid var(--line-strong); border-radius:2px;
+  background:var(--surface); color:var(--ink); font-family:"JetBrains Mono",monospace;
+  font-size:.8rem; letter-spacing:.02em; transition:border-color .18s,color .18s,background .18s;
+}
+.link:hover,.link:focus-visible{border-color:var(--accent); color:var(--accent-ink); background:var(--accent-wash)}
+.link.primary{background:var(--accent); border-color:var(--accent); color:#12100B}
+:root:not([data-theme="light"]) .link.primary{color:#12100B}
+.link.primary:hover{background:var(--accent-ink); border-color:var(--accent-ink); color:#12100B}
+footer{padding-block:2rem; border-top:1px solid var(--line); color:var(--ink-3)}
+footer .mono{text-transform:none; letter-spacing:.02em; font-size:.78rem}
+
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:2px}
+
+@media (max-width:820px){
+  .row{grid-template-columns:1fr; gap:.7rem; padding:1.4rem 0}
+  .row .code{padding-top:0}
+  .fig{border-right:0; border-bottom:1px solid var(--line)}
+  .part{border-right:0; border-bottom:1px solid var(--line)}
+  .part:last-child,.fig:last-child{border-bottom:0}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+
+<header class="hero">
+  <canvas id="sky" aria-hidden="true"></canvas>
+  <div class="wrap hero__inner">
+    <div class="eyebrow mono"><span class="dot"></span>Cotonou, Bénin &nbsp;·&nbsp; Recherche une alternance</div>
+    <h1>Chabda<span class="last">Gbemetonou</span></h1>
+    <p class="hero__lede">
+      Étudiant en <strong>3<sup>e</sup> année</strong> d'expertise informatique à <strong>EPITECH Bénin</strong>.
+      J'écris du <strong>C et du C++</strong> pour des systèmes qui tournent en réseau et en temps réel,
+      du <strong>GLSL</strong> pour ce qui s'affiche à l'écran, et du <strong>Python</strong> pour tout ce qui apprend.
+    </p>
+    <div class="hero__meta mono">
+      <a href="mailto:chabda.gbemetonou@epitech.eu">chabda.gbemetonou@epitech.eu</a>
+      <a href="tel:+2290161124153">+229 01 61 12 41 53</a>
+      <a href="https://www.linkedin.com/in/chabda-gbemetonou-41a577351" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+    <p class="hero__caption mono">
+      Ce fond est un shader GLSL rendu en temps réel — même famille que les 24 shaders du moteur graphique de Zappy&nbsp;: ciel, étoiles, eau.
+    </p>
+  </div>
+</header>
+
+<main>
+<section class="wrap" id="domaines">
+  <div class="sec-head">
+    <span class="mono">Trois terrains</span>
+    <h2>Là où je suis vraiment à l'aise</h2>
+    <p>Deux ans d'Epitech, ça se mesure moins en cours suivis qu'en projets livrés. Voici les trois familles où j'ai le plus de kilomètres.</p>
+  </div>
+  <div class="domains">
+    <article class="domain">
+      <h3>Systèmes &amp; temps réel</h3>
+      <p>Serveurs multi-clients non bloquants, protocoles binaires et texte, processus et threads, gestion mémoire manuelle. Le genre de code où une fuite ou un <em>deadlock</em> se paie tout de suite.</p>
+      <span class="proof mono">Zappy · myTeams · myFTP · The Plazza · Panoramix</span>
+    </article>
+    <article class="domain">
+      <h3>Rendu &amp; graphique</h3>
+      <p>Pipeline OpenGL écrit à la main : éclairage de Phong, animation squelettique, eau et ciel procéduraux, effets de contour et d'aura. Plus un raytracer C++ à architecture de plugins.</p>
+      <span class="proof mono">Zappy GUI · Raytracer · Arcade</span>
+    </article>
+    <article class="domain">
+      <h3>IA &amp; données</h3>
+      <p>Apprentissage supervisé et non supervisé, apprentissage par renforcement instrumenté, NLP sur textes bruts, et <em>prompt engineering</em> offensif comme défensif sur des LLM.</p>
+      <span class="proof mono">CVRIE · Start Trek · Codename · Persona</span>
+    </article>
+  </div>
+</section>
+
+<section class="wrap" id="chiffres" style="padding-top:0">
+  <div class="figures">
+    <div class="fig"><b>568</b><span class="mono">fichiers source C</span></div>
+    <div class="fig"><b>204</b><span class="mono">fichiers C++</span></div>
+    <div class="fig"><b>43</b><span class="mono">scripts Python</span></div>
+    <div class="fig"><b>24</b><span class="mono">shaders GLSL</span></div>
+    <div class="fig"><b>60+</b><span class="mono">projets rendus depuis 2024</span></div>
+  </div>
+</section>
+
+<section class="wrap" id="zappy">
+  <div class="sec-head">
+    <span class="mono">Projet phare — juin 2026</span>
+    <h2>Zappy, trois programmes qui doivent se comprendre</h2>
+    <p>Le projet de fin de deuxième année : un jeu en réseau où des équipes de drones autonomes se disputent des ressources pour atteindre le niveau d'élévation maximal. Trois exécutables, trois langages, un seul protocole.</p>
+  </div>
+  <div class="flag">
+    <div class="flag__top">
+      <span class="code mono">G-YEP-400-COT-4-1</span>
+      <h3>Zappy</h3>
+      <p>La contrainte la plus intéressante du sujet : les IA n'ont <em>aucun</em> canal de communication hors du jeu. Toute la coordination d'équipe — se rassembler, savoir qui manque, déclencher une incantation à plusieurs — passe uniquement par les messages sonores diffusés par le serveur.</p>
+    </div>
+    <div class="parts">
+      <div class="part">
+        <span class="tag mono">Serveur — C++</span>
+        <h4>Une boucle, tous les clients</h4>
+        <p>Monde, carte, joueurs et files de commandes derrière un serveur non bloquant qui tient tous les clients sur une seule boucle d'événements, avec un temps de jeu réglable.</p>
+      </div>
+      <div class="part">
+        <span class="tag mono">IA — Python</span>
+        <h4>Machine à états, une par drone</h4>
+        <p>Chaque drone est un processus autonome qui alterne entre survivre, collecter et incanter. L'équipe se reproduit via la commande <code>Fork</code> et se retrouve grâce à un encodage maison des broadcasts.</p>
+      </div>
+      <div class="part">
+        <span class="tag mono">GUI — C++ / OpenGL</span>
+        <h4>24 shaders écrits à la main</h4>
+        <p>Visualisation temps réel du monde : terrain de sable, eau animée, ciel étoilé, personnages en animation squelettique, auras et halos d'incantation — chaque effet a son couple vertex / fragment.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="projets">
+  <div class="sec-head">
+    <span class="mono">Le reste du dossier</span>
+    <h2>Projets académiques</h2>
+    <p>Classés par domaine. Le code à gauche est le code de module officiel Epitech — il dit de quelle unité vient le projet.</p>
+  </div>
+  <p class="legend mono">
+    G-OOP&nbsp;— programmation orientée objet · G-NWP&nbsp;— réseau · G-CCP&nbsp;— programmation concurrente ·
+    G-CNA&nbsp;— calcul numérique · G-AIA&nbsp;— intelligence artificielle · G-ING&nbsp;— ingénierie logicielle
+  </p>
+
+  <h3 class="mono" style="color:var(--ink-3); margin:2.4rem 0 .4rem; letter-spacing:.1em">Moteurs &amp; rendu</h3>
+  <div class="rows">
+    <article class="row">
+      <span class="code mono">G-OOP-400<br>raytracer</span>
+      <div>
+        <h3>Raytracer</h3>
+        <p>Moteur de rendu par lancer de rayons en C++ : primitives, matériaux et lumières chargés depuis des fichiers de scène, architecture ouverte aux plugins pour ajouter de nouvelles formes sans toucher au cœur.</p>
+      </div>
+      <div class="stack"><span class="chip">C++</span><span class="chip">POO</span><span class="chip">plugins</span><span class="chip">maths 3D</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-OOP-400<br>arcade</span>
+      <div>
+        <h3>Arcade</h3>
+        <p>Plateforme de jeux rétro où bibliothèques graphiques et jeux sont chargés dynamiquement à chaud, derrière une interface commune. L'interface a été négociée et partagée avec un autre groupe — contrainte d'intégration réelle, pas simulée.</p>
+      </div>
+      <div class="stack"><span class="chip">C++</span><span class="chip">dlopen</span><span class="chip">interfaces</span><span class="chip">SFML/ncurses</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-OOP-400<br>tekspice</span>
+      <div>
+        <h3>NanoTekSpice</h3>
+        <p>Simulateur de circuits logiques : composants élémentaires et circuits complexes assemblés depuis un fichier de description, propagation des états et détection des boucles combinatoires.</p>
+      </div>
+      <div class="stack"><span class="chip">C++</span><span class="chip">composite</span><span class="chip">simulation</span></div>
+    </article>
+  </div>
+
+  <h3 class="mono" style="color:var(--ink-3); margin:2.4rem 0 .4rem; letter-spacing:.1em">Systèmes, réseau &amp; concurrence</h3>
+  <div class="rows">
+    <article class="row">
+      <span class="code mono">G-NWP-400<br>myteams</span>
+      <div>
+        <h3>myTeams</h3>
+        <p>Client et serveur de messagerie d'équipe en C, avec un protocole applicatif entièrement spécifié (équipes, canaux, fils de discussion, messages privés) et un serveur qui tient plusieurs sessions simultanées.</p>
+      </div>
+      <div class="stack"><span class="chip">C</span><span class="chip">sockets</span><span class="chip">protocole</span><span class="chip">select()</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-NWP-400<br>myftp</span>
+      <div>
+        <h3>myFTP</h3>
+        <p>Serveur FTP conforme à la RFC 959 : authentification, connexions de données passives, navigation et transfert de fichiers, chaque client servi sans bloquer les autres.</p>
+      </div>
+      <div class="stack"><span class="chip">C</span><span class="chip">RFC 959</span><span class="chip">TCP</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-CCP-400<br>theplazza</span>
+      <div>
+        <h3>The Plazza</h3>
+        <p>Simulation d'une chaîne de pizzerias : les commandes sont réparties entre des processus cuisine, chacun gérant un pool de cuisiniers en threads, avec stock partagé et communication inter-processus.</p>
+      </div>
+      <div class="stack"><span class="chip">C++</span><span class="chip">threads</span><span class="chip">IPC</span><span class="chip">mutex</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-CCP-400<br>panoramix</span>
+      <div>
+        <h3>Panoramix</h3>
+        <p>Problème classique de synchronisation revisité : plusieurs villageois se servent dans un chaudron qu'un druide doit remplir au bon moment, sans interblocage ni famine.</p>
+      </div>
+      <div class="stack"><span class="chip">C++</span><span class="chip">sémaphores</span><span class="chip">synchronisation</span></div>
+    </article>
+  </div>
+
+  <h3 class="mono" style="color:var(--ink-3); margin:2.4rem 0 .4rem; letter-spacing:.1em">Calcul numérique</h3>
+  <div class="rows">
+    <article class="row">
+      <span class="code mono">G-CNA-400<br>stoneanalysis</span>
+      <div>
+        <h3>Stone Analysis</h3>
+        <p>Analyse spectrale de fichiers audio en C pur : lecture et écriture WAV, DFT naïve puis FFT Cooley-Tukey et transformée inverse, avec un mode d'analyse des fréquences dominantes.</p>
+      </div>
+      <div class="stack"><span class="chip">C</span><span class="chip">FFT</span><span class="chip">Cooley-Tukey</span><span class="chip">WAV</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-CNA-400<br>interstonar</span>
+      <div>
+        <h3>Interstonar</h3>
+        <p>Simulation de trajectoire spatiale : intégration numérique d'un champ gravitationnel à plusieurs corps, en mode local comme en mode global, avec détection de collision.</p>
+      </div>
+      <div class="stack"><span class="chip">C</span><span class="chip">physique</span><span class="chip">intégration</span></div>
+    </article>
+  </div>
+
+  <h3 class="mono" style="color:var(--ink-3); margin:2.4rem 0 .4rem; letter-spacing:.1em">Intelligence artificielle &amp; données</h3>
+  <div class="rows">
+    <article class="row">
+      <span class="code mono">G-AIA-401<br>starttrek</span>
+      <div>
+        <h3>Start Trek — apprentissage par renforcement</h3>
+        <p>Atterrissage d'un module lunaire sous Gymnasium. J'ai d'abord construit les politiques de référence (aléatoire, heuristique) et toute l'instrumentation — retours, durée d'épisode, cause de fin — avant d'entraîner un agent Q-learning puis un DQN et de comparer les ablations.</p>
+        <p class="when">avril → mai 2026</p>
+      </div>
+      <div class="stack"><span class="chip">Python</span><span class="chip">Gymnasium</span><span class="chip">DQN</span><span class="chip">Q-learning</span><span class="chip">Bellman</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-AIA-400<br>cvrie</span>
+      <div>
+        <h3>DR CVRIE — supervisé &amp; non supervisé</h3>
+        <p>Deux volets : classification d'images médicales pour identifier le type de pathologie, et regroupement de 1&nbsp;010 témoignages de patients par pathologie et par urgence — sans jamais donner d'étiquette au modèle, la similarité est déduite du seul contenu textuel.</p>
+        <p class="when">février → mars 2026</p>
+      </div>
+      <div class="stack"><span class="chip">Python</span><span class="chip">scikit-learn</span><span class="chip">NLP</span><span class="chip">clustering</span><span class="chip">pandas</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-AIA-410<br>codename</span>
+      <div>
+        <h3>Codename — bataille de prompts</h3>
+        <p>Tournoi asymétrique de <em>prompt engineering</em> : d'un côté un prompt système qui garde un secret et ne le lâche qu'avec le bon mot de passe, de l'autre une attaque conçue pour faire craquer la défense d'un adversaire inconnu. Cinq attaques et cinq défenses évaluées chaque jour.</p>
+      </div>
+      <div class="stack"><span class="chip">LLM</span><span class="chip">granite3.1-moe</span><span class="chip">sécurité</span><span class="chip">red team</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-AIA-410<br>persona</span>
+      <div>
+        <h3>Persona</h3>
+        <p>Assistant conversationnel et générateur de newsletter automatisés, orchestrés par des workflows, conteneurisés avec Docker et pilotés depuis un tableau de bord.</p>
+      </div>
+      <div class="stack"><span class="chip">Docker</span><span class="chip">automatisation</span><span class="chip">LLM</span><span class="chip">dashboard</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">Tardis</span>
+      <div>
+        <h3>Tardis — prédiction de retards</h3>
+        <p>Analyse de données de circulation ferroviaire et modèle de prédiction des retards, du nettoyage du jeu de données jusqu'aux visualisations.</p>
+        <p class="when">avril → mai 2025</p>
+      </div>
+      <div class="stack"><span class="chip">Python</span><span class="chip">pandas</span><span class="chip">Jupyter</span><span class="chip">matplotlib</span></div>
+    </article>
+  </div>
+
+  <h3 class="mono" style="color:var(--ink-3); margin:2.4rem 0 .4rem; letter-spacing:.1em">Web &amp; produit</h3>
+  <div class="rows">
+    <article class="row">
+      <span class="code mono">Discovery<br>VoltaLink</span>
+      <div>
+        <h3>VoltaLink</h3>
+        <p>Application complète autour de la recharge de véhicules électriques : interface Vue 3 avec cartographie interactive, API Node/Express avec base de données et canal WebSocket temps réel, plus un simulateur de véhicules pour alimenter la démo. Déployée en ligne.</p>
+      </div>
+      <div class="stack"><span class="chip">Vue 3</span><span class="chip">Vite</span><span class="chip">Tailwind</span><span class="chip">Node/Express</span><span class="chip">WebSocket</span><span class="chip">Leaflet</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">G-ING-400<br>codewash</span>
+      <div>
+        <h3>CodeWash</h3>
+        <p>Reprise d'une application React/Electron écrite sans structure : audit du code existant, mise en place du linting, refonte progressive et documentation — améliorer sans casser ce qui fonctionnait déjà.</p>
+      </div>
+      <div class="stack"><span class="chip">React</span><span class="chip">Electron</span><span class="chip">ESLint</span><span class="chip">refactoring</span></div>
+    </article>
+    <article class="row">
+      <span class="code mono">Stage<br>Bénin Codeur</span>
+      <div>
+        <h3>Alphabrique — site e-commerce</h3>
+        <p>Boutique en ligne de briques et pavés, du catalogue au paiement : intégration WooCommerce et branchement du Mobile Money MTN et Moov, les moyens de paiement réellement utilisés ici.</p>
+        <p class="when">septembre → octobre 2025 · Cotonou</p>
+      </div>
+      <div class="stack"><span class="chip">WordPress</span><span class="chip">WooCommerce</span><span class="chip">Mobile Money</span></div>
+    </article>
+  </div>
+</section>
+
+<section class="wrap" id="parcours">
+  <div class="sec-head">
+    <span class="mono">Parcours</span>
+    <h2>Formation</h2>
+  </div>
+  <div class="track">
+    <div class="stop">
+      <span class="when mono">Depuis septembre 2024</span>
+      <h3>Bachelor en technologie de l'information</h3>
+      <p class="org">EPITECH — Cotonou, Bénin · 3<sup>e</sup> année en cours</p>
+    </div>
+    <div class="stop">
+      <span class="when mono">Janvier → juillet 2024</span>
+      <h3>English as a Foreign Language</h3>
+      <p class="org">BT Institute of Business and Technology — Accra, Ghana</p>
+    </div>
+    <div class="stop">
+      <span class="when mono">2016 → juillet 2022</span>
+      <h3>Baccalauréat série C</h3>
+      <p class="org">Collège Catholique Notre-Dame de Lourdes — Porto-Novo</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap" id="competences">
+  <div class="sec-head">
+    <span class="mono">Boîte à outils</span>
+    <h2>Compétences</h2>
+  </div>
+  <div class="skills">
+    <div class="skillgroup">
+      <h4>Langages</h4>
+      <div class="stack">
+        <span class="chip">C</span><span class="chip">C++</span><span class="chip">Python</span><span class="chip">JavaScript</span>
+        <span class="chip">GLSL</span><span class="chip">Rust</span><span class="chip">Haskell</span><span class="chip">Bash</span><span class="chip">HTML/CSS</span>
+      </div>
+    </div>
+    <div class="skillgroup">
+      <h4>Front-end</h4>
+      <div class="stack">
+        <span class="chip">Vue 3</span><span class="chip">React</span><span class="chip">Vite</span><span class="chip">Tailwind</span><span class="chip">Electron</span><span class="chip">Leaflet</span>
+      </div>
+    </div>
+    <div class="skillgroup">
+      <h4>Back-end &amp; systèmes</h4>
+      <div class="stack">
+        <span class="chip">Node/Express</span><span class="chip">WebSocket</span><span class="chip">sockets TCP</span><span class="chip">threads &amp; IPC</span><span class="chip">Docker</span><span class="chip">Linux</span>
+      </div>
+    </div>
+    <div class="skillgroup">
+      <h4>IA &amp; données</h4>
+      <div class="stack">
+        <span class="chip">scikit-learn</span><span class="chip">pandas</span><span class="chip">NumPy</span><span class="chip">matplotlib</span><span class="chip">Gymnasium</span><span class="chip">Jupyter</span><span class="chip">prompt engineering</span>
+      </div>
+    </div>
+    <div class="skillgroup">
+      <h4>Graphique</h4>
+      <div class="stack">
+        <span class="chip">OpenGL</span><span class="chip">shaders</span><span class="chip">SFML</span><span class="chip">raytracing</span><span class="chip">maths 3D</span>
+      </div>
+    </div>
+    <div class="skillgroup">
+      <h4>Outils &amp; no-code</h4>
+      <div class="stack">
+        <span class="chip">Git</span><span class="chip">Make</span><span class="chip">CI Epitech</span><span class="chip">WordPress</span><span class="chip">WooCommerce</span><span class="chip">systeme.io</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="aside">
+    <div>
+      <span class="mono">Langues</span>
+      <p>Français — langue maternelle. Anglais — niveau intermédiaire, consolidé par six mois de formation à Accra.</p>
+    </div>
+    <div>
+      <span class="mono">En équipe</span>
+      <p>Autonome sur ma partie, à l'aise pour présenter et défendre un choix technique devant le groupe. La plupart des projets ci-dessus ont été menés à deux, trois ou quatre.</p>
+    </div>
+    <div>
+      <span class="mono">En dehors du code</span>
+      <p>Musique, MMA, jeux vidéo, lecture et cinéma — c'est aussi ce qui m'a amené vers la programmation graphique.</p>
+    </div>
+  </div>
+</section>
+
+<section class="contact" id="contact">
+  <div class="wrap">
+    <h2>Je cherche une alternance</h2>
+    <p>Développement système, rendu temps réel, IA appliquée ou data — si l'un de ces terrains est le vôtre, écrivons-nous.</p>
+    <div class="links">
+      <a class="link primary" href="mailto:chabda.gbemetonou@epitech.eu">chabda.gbemetonou@epitech.eu</a>
+      <a class="link" href="https://www.linkedin.com/in/chabda-gbemetonou-41a577351" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM3 9h4v12H3V9zm7 0h3.8v1.7h.05c.53-.95 1.83-1.95 3.75-1.95C21.6 8.75 23 11 23 14.4V21h-4v-5.9c0-1.4-.03-3.2-2-3.2-2 0-2.3 1.5-2.3 3.1V21h-4V9z"/></svg>
+        LinkedIn
+      </a>
+      <a class="link" href="tel:+2290161124153">+229 01 61 12 41 53</a>
+      <span class="link" style="cursor:default">Cotonou, Bénin</span>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap mono">Chabda Gbemetonou — portfolio, août 2026. Page écrite à la main : HTML, CSS et un shader WebGL.</div>
+</footer>
+
+<script>
+(function(){
+  var cv = document.getElementById('sky');
+  var gl = cv.getContext('webgl', {antialias:false, alpha:false});
+  if(!gl) return;
+
+  var vs = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}';
+  var fs = [
+    'precision highp float;',
+    'uniform vec2 u_res; uniform float u_t;',
+    'float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}',
+    'float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);',
+    ' return mix(mix(hash(i),hash(i+vec2(1.0,0.0)),f.x),mix(hash(i+vec2(0.0,1.0)),hash(i+vec2(1.0,1.0)),f.x),f.y);}',
+    'void main(){',
+    ' vec2 uv=gl_FragCoord.xy/u_res;',
+    ' vec2 q=(gl_FragCoord.xy-0.5*u_res)/max(u_res.y,1.0);',
+    ' vec3 col=mix(vec3(0.055,0.075,0.125),vec3(0.030,0.048,0.098),uv.y);',
+    ' float glow=exp(-abs(uv.y-0.16)*6.5);',
+    ' col+=vec3(0.58,0.38,0.14)*glow*0.42;',
+    ' vec2 sp=gl_FragCoord.xy/max(u_res.y,1.0)*95.0;',
+    ' vec2 si=floor(sp); float sh=hash(si);',
+    ' float tw=0.55+0.45*sin(u_t*1.3+sh*40.0);',
+    ' float d=length(fract(sp)-0.5);',
+    ' float star=smoothstep(0.14,0.0,d)*step(0.982,sh)*tw;',
+    ' col+=vec3(0.85,0.90,1.0)*star*smoothstep(0.12,0.9,uv.y);',
+    ' float w=noise(vec2(q.x*3.2,uv.y*18.0-u_t*0.32));',
+    ' float m=smoothstep(0.34,0.0,uv.y);',
+    ' col+=vec3(0.10,0.32,0.38)*w*m*0.42;',
+    ' col+=vec3(0.55,0.36,0.15)*m*0.10;',
+    ' col*=1.0-0.55*length(q*vec2(0.55,0.85));',
+    ' gl_FragColor=vec4(col,1.0);',
+    '}'
+  ].join('\n');
+
+  function sh(type, src){
+    var s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    return gl.getShaderParameter(s, gl.COMPILE_STATUS) ? s : null;
+  }
+  var v = sh(gl.VERTEX_SHADER, vs), f = sh(gl.FRAGMENT_SHADER, fs);
+  if(!v || !f) return;
+  var prog = gl.createProgram();
+  gl.attachShader(prog, v); gl.attachShader(prog, f); gl.linkProgram(prog);
+  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+  gl.useProgram(prog);
+
+  var buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,3,-1,-1,3]), gl.STATIC_DRAW);
+  var loc = gl.getAttribLocation(prog, 'p');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+  var uRes = gl.getUniformLocation(prog, 'u_res'),
+      uT   = gl.getUniformLocation(prog, 'u_t');
+
+  function resize(){
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    var w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+    if(cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; gl.viewport(0,0,w,h); }
+    gl.uniform2f(uRes, cv.width, cv.height);
+  }
+
+  var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var start = performance.now(), visible = true;
+
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(e){ visible = e[0].isIntersecting; }).observe(cv);
+  }
+
+  function frame(now){
+    resize();
+    gl.uniform1f(uT, still ? 8.0 : (now - start) / 1000);
+    if(visible) gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if(!still) requestAnimationFrame(frame);
+  }
+  if(still){ frame(start); window.addEventListener('resize', function(){ frame(start); }); }
+  else requestAnimationFrame(frame);
+})();
+</script>

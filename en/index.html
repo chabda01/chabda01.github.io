@@ -6,7 +6,7 @@
 <title>Chabda Gbemetonou — Systems, Real-Time Rendering and AI Developer</title>
 <meta name="description" content="Chabda Gbemetonou, third-year student at Epitech Cotonou. Networked C and C++ systems, OpenGL rendering engines, applied artificial intelligence. Looking for an apprenticeship.">
 <meta name="author" content="Chabda Gbemetonou">
-<meta name="theme-color" content="#100D0A">
+<meta name="theme-color" content="#120F0B">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
 <link rel="canonical" href="https://chabda01.github.io/en/">
 <link rel="alternate" hreflang="fr" href="https://chabda01.github.io/">
@@ -20,15 +20,15 @@
 <meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
-<header class="hero">
+<header class="hero" id="top">
   <canvas id="sky" aria-hidden="true"></canvas>
   <nav class="langswitch" aria-label="Langue / Language"><a href="../" hreflang="fr">FR</a><a href="./" hreflang="en" aria-current="page">EN</a></nav>
   <div class="wrap hero__inner">
-    <p class="mono place">Cotonou · Benin</p>
+    <p class="label place">Cotonou · Benin</p>
     <h1>Chabda<em>Gbemetonou</em></h1>
     <p class="hero__lede">I write C and C++ for programs that run across a network, and GLSL for the ones that have to end up on screen.</p>
     <div class="hero__meta">
@@ -40,6 +40,14 @@
   </div>
 </header>
 
+<div class="topbar">
+  <div class="wrap topbar__in">
+    <a class="topbar__name" href="#top">Chabda Gbemetonou</a>
+    <nav aria-label="Sections"><a href="#work">Work</a><a href="#path">Background</a><a href="#tools">Tools</a><a href="#contact">Contact</a></nav>
+    <div class="langswitch"><a href="../" hreflang="fr">FR</a><a href="./" hreflang="en" aria-current="page">EN</a></div>
+  </div>
+</div>
+
 <main>
 <section class="narrow letter lead-in">
   <p>I am in my <strong>third year at Epitech Cotonou</strong>. I spend most of my time in languages where you manage your own memory, because that is where you find out what the machine is really doing.</p>
@@ -48,44 +56,55 @@
   <p class="signature">— Chabda</p>
 </section>
 
+<div class="wrap facts">
+    <div><span class="label">Looking for</span><span>An apprenticeship</span></div>
+    <div><span class="label">Based in</span><span>Cotonou, Benin</span></div>
+    <div><span class="label">Education</span><span>Epitech · third year</span></div>
+    <div><span class="label">Languages</span><span>French native · English intermediate</span></div>
+</div>
+
 <div class="wrap"><hr class="rule"></div>
 
-<section class="wrap flagship">
-  <div class="flagship__head">
-    <p class="mono" style="color:var(--accent); margin-bottom:.9rem">June 2026 · end-of-second-year project</p>
+<section class="flagship" id="flagship">
+  <div class="wrap">
+  <div class="panel">
+  <div class="panel__head">
+    <span class="label">June 2026 · end-of-second-year project</span>
     <h2>Zappy</h2>
     <p>A networked game where teams of autonomous drones compete for resources to reach the highest elevation level. Three executables, three languages, one protocol — and the rule that changes everything: the drones have no way of communicating outside the game.</p>
   </div>
   <div class="pieces">
     <div class="piece">
-      <span class="mono">Server — C++</span>
+      <span class="label">Server — C++</span>
       <h3>One loop, every client</h3>
       <p>The world, the map, the players and their command queues behind a non-blocking server that holds every connection on a single event loop, with an adjustable game clock.</p>
     </div>
     <div class="piece">
-      <span class="mono">AI — Python</span>
+      <span class="label">AI — Python</span>
       <h3>A state machine per drone</h3>
       <p>Each drone is an autonomous process cycling between surviving, collecting and incanting. The team reproduces through the game's <code>Fork</code> command and regroups using a sound-message encoding we had to invent.</p>
     </div>
     <div class="piece">
-      <span class="mono">Rendering — C++ / OpenGL</span>
+      <span class="label">Rendering — C++ / OpenGL</span>
       <h3>Twenty-four shaders</h3>
       <p>Sand terrain, animated water, star field, skeletally animated characters, auras and incantation halos. Every effect has its own vertex and fragment pair, written by hand.</p>
     </div>
   </div>
-  <p class="note" style="max-width:60ch; margin-top:2.8rem">All team coordination — regrouping, knowing who is missing, triggering an incantation together — travels only through the sounds the server broadcasts. That constraint took up most of my time, and it was by far the most interesting part.</p>
+  <p class="note">All team coordination — regrouping, knowing who is missing, triggering an incantation together — travels only through the sounds the server broadcasts. That constraint took up most of my time, and it was by far the most interesting part.</p>
+  </div>
+  </div>
 </section>
 
 <div class="wrap"><hr class="rule"></div>
 
-<section class="wrap">
+<section class="wrap" id="work">
   <div class="sec-title">
-    <span class="mono">The rest</span>
+    <span class="label">The rest</span>
     <h2>What I have built</h2>
   </div>
-  <p class="sec-intro">To the left of each project is its Epitech module code, which says which unit it comes from: <span class="mono" style="text-transform:none; letter-spacing:.04em">OOP</span> for object orientation, <span class="mono" style="text-transform:none; letter-spacing:.04em">NWP</span> for networking, <span class="mono" style="text-transform:none; letter-spacing:.04em">CCP</span> for concurrency, <span class="mono" style="text-transform:none; letter-spacing:.04em">CNA</span> for numerical computing, <span class="mono" style="text-transform:none; letter-spacing:.04em">AIA</span> for artificial intelligence.</p>
+  <p class="sec-intro">To the left of each project is its Epitech module code, which says which unit it comes from: <span class="mono">OOP</span> for object orientation, <span class="mono">NWP</span> for networking, <span class="mono">CCP</span> for concurrency, <span class="mono">CNA</span> for numerical computing, <span class="mono">AIA</span> for artificial intelligence.</p>
 
-  <span class="mono group-label">Engines and rendering</span>
+  <span class="label group-label">Engines and rendering</span>
   <article class="entry">
     <span class="entry__code mono">G-OOP-400<br>raytracer</span>
     <div class="entry__body">
@@ -112,7 +131,7 @@
     </div>
   </article>
 
-  <span class="mono group-label">Systems, networking and concurrency</span>
+  <span class="label group-label">Systems, networking and concurrency</span>
   <article class="entry">
     <span class="entry__code mono">G-NWP-400<br>myteams</span>
     <div class="entry__body">
@@ -146,7 +165,7 @@
     </div>
   </article>
 
-  <span class="mono group-label">Numerical computing</span>
+  <span class="label group-label">Numerical computing</span>
   <article class="entry">
     <span class="entry__code mono">G-CNA-400<br>stoneanalysis</span>
     <div class="entry__body">
@@ -165,7 +184,7 @@
     </div>
   </article>
 
-  <span class="mono group-label">Artificial intelligence and data</span>
+  <span class="label group-label">Artificial intelligence and data</span>
   <article class="entry">
     <span class="entry__code mono">G-AIA-401<br>starttrek</span>
     <div class="entry__body">
@@ -207,7 +226,7 @@
     </div>
   </article>
 
-  <span class="mono group-label">Web and product</span>
+  <span class="label group-label">Web and product</span>
   <article class="entry">
     <span class="entry__code mono">Discovery<br>VoltaLink</span>
     <div class="entry__body">
@@ -237,28 +256,28 @@
 
 <div class="wrap"><hr class="rule"></div>
 
-<section class="wrap">
+<section class="wrap" id="path">
   <div class="sec-title">
-    <span class="mono">Background</span>
+    <span class="label">Background</span>
     <h2>Where I come from</h2>
   </div>
   <div class="path">
     <div class="step">
-      <span class="mono">Since Sept. 2024</span>
+      <span class="label">Since Sept. 2024</span>
       <div>
         <h3>Bachelor in Information Technology</h3>
         <p>Epitech — Cotonou, Benin. Third year in progress.</p>
       </div>
     </div>
     <div class="step">
-      <span class="mono">Jan. → July 2024</span>
+      <span class="label">Jan. → July 2024</span>
       <div>
         <h3>English as a Foreign Language</h3>
         <p>BT Institute of Business and Technology — Accra, Ghana.</p>
       </div>
     </div>
     <div class="step">
-      <span class="mono">2016 → July 2022</span>
+      <span class="label">2016 → July 2022</span>
       <div>
         <h3>Baccalauréat, science stream</h3>
         <p>Collège Catholique Notre-Dame de Lourdes — Porto-Novo.</p>
@@ -269,9 +288,9 @@
 
 <div class="wrap"><hr class="rule"></div>
 
-<section class="wrap">
+<section class="wrap" id="tools">
   <div class="sec-title">
-    <span class="mono">Tools</span>
+    <span class="label">Tools</span>
     <h2>What I work with</h2>
   </div>
   <div class="crafts">
@@ -295,7 +314,7 @@
   <p class="offbeat">French is my first language; my English is intermediate, built up over six months in Accra. Away from the code: music, MMA, video games, reading and a lot of cinema — part of what pulled me towards computer graphics in the first place.</p>
 </section>
 
-<section class="closing">
+<section class="closing" id="contact">
   <div class="wrap">
     <h2>Let's talk<em>.</em></h2>
     <p>I am looking for an apprenticeship. If any of this is your ground, write to me — I answer quickly.</p>

@@ -272,7 +272,7 @@ function initTilt(){
 }
 
 function initReveal(){
-  var els = document.querySelectorAll('.reveal');
+  var els = document.querySelectorAll('.reveal, .letter-reveal');
   if(!('IntersectionObserver' in window)){ els.forEach(function(e){ e.classList.add('is-visible'); }); return; }
   var io = new IntersectionObserver(function(entries){
     entries.forEach(function(en){ if(en.isIntersecting){ en.target.classList.add('is-visible'); io.unobserve(en.target); } });

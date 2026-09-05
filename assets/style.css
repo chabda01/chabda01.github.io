@@ -374,4 +374,4 @@ main{position:relative}
 .piece:hover{background:rgba(255,255,255,.03)}
 
 /* ─────────────  illustrations de projet  ───────────── */
-.entry__shot{margin-top:1rem; display:block; max-width:280px; width:100%; border-radius:2px; border:1px solid var(--rule); box-shadow:var(--shade)}
+.entry__shot{margin-top:1rem; display:block; max-width:520px; width:100%; border-radius:2px; border:1px solid var(--rule); box-shadow:var(--shade)}

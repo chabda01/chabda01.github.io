@@ -301,3 +301,66 @@ code{
   font-size:.88em; padding:.08em .3em; border-radius:2px;
   background:rgba(233,168,85,.14); color:inherit;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Refonte 2026 — profondeur, mouvement, fil narratif
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─────────────  bouton d'appel (hero)  ───────────── */
+.cta{
+  display:inline-flex; align-self:flex-start; align-items:center; gap:.6rem;
+  margin-top:.4rem; padding:.85rem 1.5rem; border-radius:999px;
+  border:1px solid rgba(233,168,85,.55); color:#F7F2E8;
+  font-size:.92rem; font-weight:600; letter-spacing:.01em;
+  background:rgba(233,168,85,.08);
+  transition:background .25s,border-color .25s,transform .25s;
+}
+.cta:hover{background:rgba(233,168,85,.18); border-color:#E9A855; transform:translateY(-1px)}
+.cta svg{width:15px; height:15px; transition:transform .25s}
+.cta:hover svg{transform:translateX(3px)}
+
+/* ─────────────  réseau de particules et anneau 3D (hero)  ───────────── */
+#network{position:absolute; inset:0; width:100%; height:100%; display:block; z-index:-1}
+.orb{position:absolute; top:8%; right:6%; width:220px; height:220px; perspective:900px; opacity:.55; pointer-events:none}
+.orb__ring{position:absolute; inset:0; transform-style:preserve-3d}
+.orb__ring i{display:block; width:100%; height:100%; border-radius:50%; border:1px solid rgba(233,168,85,.55); animation:spin 20s linear infinite}
+.orb__ring--a{transform:rotateX(78deg)}
+.orb__ring--b{transform:rotateX(78deg) rotateY(62deg)}
+.orb__ring--b i{animation-duration:26s; animation-direction:reverse; border-color:rgba(244,239,230,.35)}
+.orb__ring--c{transform:rotateY(80deg)}
+.orb__ring--c i{animation-duration:33s}
+@keyframes spin{from{transform:rotateZ(0)} to{transform:rotateZ(360deg)}}
+@media (max-width:900px){.orb{display:none}}
+.hero h1{will-change:transform}
+
+/* ─────────────  fil narratif (storyline)  ───────────── */
+main{position:relative}
+.storyline{display:none; position:absolute; left:30px; top:0; bottom:0; width:2px; background:var(--rule)}
+.storyline__fill{
+  position:absolute; inset:0; transform-origin:top; transform:scaleY(0);
+  background:linear-gradient(var(--accent-quiet),var(--accent));
+  box-shadow:0 0 14px color-mix(in srgb, var(--accent) 65%, transparent);
+}
+.storyline__dot{
+  position:absolute; left:50%; width:9px; height:9px; border-radius:50%;
+  translate:-50% -50%; background:var(--ground); border:2px solid var(--ink-3);
+  transition:background .3s,border-color .3s,box-shadow .3s;
+}
+.storyline__dot.is-active{background:var(--accent); border-color:var(--accent); box-shadow:0 0 12px color-mix(in srgb, var(--accent) 70%, transparent)}
+@media (min-width:1240px){.storyline{display:block}}
+
+/* ─────────────  révélation au scroll  ───────────── */
+.reveal{opacity:0; transform:translateY(22px) rotateX(4deg); transform-origin:top center; transition:opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1)}
+.reveal.is-visible{opacity:1; transform:none}
+@media (prefers-reduced-motion:reduce){.reveal{transition:none; transform:none; opacity:1}}
+
+/* ─────────────  bascule 3D au survol  ───────────── */
+.tilt{transition:transform .4s cubic-bezier(.2,.8,.2,1); will-change:transform}
+
+/* ─────────────  petite scène svg (Zappy)  ───────────── */
+.scene{width:100%; height:120px; margin-bottom:2.6rem; display:block}
+.piece{padding:.9rem; margin:-.9rem; border-radius:4px; transition:background .2s}
+.piece:hover{background:rgba(255,255,255,.03)}
+
+/* ─────────────  illustrations de projet  ───────────── */
+.entry__shot{margin-top:1rem; display:block; max-width:280px; width:100%; border-radius:2px; border:1px solid var(--rule); box-shadow:var(--shade)}

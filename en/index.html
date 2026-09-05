@@ -26,17 +26,24 @@
 <body>
 <header class="hero" id="top">
   <canvas id="sky" aria-hidden="true"></canvas>
+  <canvas id="network" aria-hidden="true"></canvas>
+  <div class="orb" aria-hidden="true">
+    <div class="orb__ring orb__ring--a"><i></i></div>
+    <div class="orb__ring orb__ring--b"><i></i></div>
+    <div class="orb__ring orb__ring--c"><i></i></div>
+  </div>
   <nav class="langswitch" aria-label="Langue / Language"><a href="../" hreflang="fr">FR</a><a href="./" hreflang="en" aria-current="page">EN</a></nav>
   <div class="wrap hero__inner">
     <p class="label place">Cotonou · Benin</p>
-    <h1>Chabda<em>Gbemetonou</em></h1>
+    <h1 id="heroTitle">Chabda<em>Gbemetonou</em></h1>
     <p class="hero__lede">I write C and C++ for programs that run across a network, and GLSL for the ones that have to end up on screen.</p>
     <div class="hero__meta">
       <a href="mailto:chabda.gbemetonou@epitech.eu">chabda.gbemetonou@epitech.eu</a>
       <a href="https://www.linkedin.com/in/chabda-gbemetonou-41a577351" target="_blank" rel="noopener">LinkedIn</a>
       <a href="tel:+2290161124153">+229 01 61 12 41 53</a>
     </div>
-    <p class="hero__note">The sky behind this text is not an image. It is a shader your graphics card is computing right now, from the same family as the ones I wrote for the Zappy engine.</p>
+    <a class="cta" href="#contact">Let's talk about an alternance <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+    <p class="hero__note">The sky behind this text is a shader your graphics card is computing right now, from the same family as the ones I wrote for the Zappy engine. The points drifting in front of it are a small network finding itself — nodes discovering their neighbours, the same idea behind every socket and protocol in this page.</p>
   </div>
 </header>
 
@@ -49,14 +56,23 @@
 </div>
 
 <main>
-<section class="narrow letter lead-in">
+<div class="storyline" aria-hidden="true">
+  <div class="storyline__fill" id="storylineFill"></div>
+  <div class="storyline__dot" data-target="flagship"></div>
+  <div class="storyline__dot" data-target="work"></div>
+  <div class="storyline__dot" data-target="path"></div>
+  <div class="storyline__dot" data-target="tools"></div>
+  <div class="storyline__dot" data-target="contact"></div>
+</div>
+
+<section class="narrow letter lead-in reveal">
   <p>I am in my <strong>third year at Epitech Cotonou</strong>. I spend most of my time in languages where you manage your own memory, because that is where you find out what the machine is really doing.</p>
   <p>What holds my attention is the moment when <span class="accent">separately written programs finally understand each other</span> — a server, an artificial intelligence and a graphics engine all speaking the same protocol at last. And the other moment, when an image appears on screen because you wrote the lighting equation yourself.</p>
   <p>I am looking for an apprenticeship. Systems, real-time rendering, applied AI, data — or any subject where you have to understand the machine before writing the first line.</p>
   <p class="signature">— Chabda</p>
 </section>
 
-<div class="wrap facts">
+<div class="wrap facts reveal">
     <div><span class="label">Looking for</span><span>An apprenticeship</span></div>
     <div><span class="label">Based in</span><span>Cotonou, Benin</span></div>
     <div><span class="label">Education</span><span>Epitech · third year</span></div>
@@ -67,24 +83,46 @@
 
 <section class="flagship" id="flagship">
   <div class="wrap">
-  <div class="panel">
+  <div class="panel reveal">
   <div class="panel__head">
     <span class="label">June 2026 · end-of-second-year project</span>
     <h2>Zappy</h2>
     <p>A networked game where teams of autonomous drones compete for resources to reach the highest elevation level. Three executables, three languages, one protocol — and the rule that changes everything: the drones have no way of communicating outside the game.</p>
   </div>
+  <svg class="scene" viewBox="0 0 600 120" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="0,90 60,70 130,88 210,60 300,85 380,55 470,82 540,65 600,80" fill="none" stroke="#4a3420" stroke-width="1.5" opacity=".7"></polyline>
+    <polyline points="0,105 80,98 160,108 260,96 340,106 430,94 520,104 600,98" fill="none" stroke="#E9A855" stroke-width="1.2" opacity=".55"></polyline>
+    <circle cx="70" cy="22" r="1.4" fill="#F4EFE6"></circle>
+    <circle cx="140" cy="14" r="1" fill="#F4EFE6" opacity=".7"></circle>
+    <circle cx="230" cy="26" r="1.6" fill="#F4EFE6"></circle>
+    <circle cx="310" cy="12" r="1" fill="#F4EFE6" opacity=".6"></circle>
+    <circle cx="400" cy="20" r="1.3" fill="#F4EFE6"></circle>
+    <circle cx="480" cy="10" r="1" fill="#F4EFE6" opacity=".7"></circle>
+    <circle cx="555" cy="24" r="1.4" fill="#F4EFE6"></circle>
+    <g stroke="#E9A855" stroke-width="1" opacity=".8">
+      <line x1="150" y1="45" x2="230" y2="30"></line>
+      <line x1="230" y1="30" x2="330" y2="50"></line>
+      <line x1="330" y1="50" x2="420" y2="34"></line>
+    </g>
+    <g fill="#E9A855">
+      <circle cx="150" cy="45" r="2.6"></circle>
+      <circle cx="230" cy="30" r="2.6"></circle>
+      <circle cx="330" cy="50" r="2.6"></circle>
+      <circle cx="420" cy="34" r="2.6"></circle>
+    </g>
+  </svg>
   <div class="pieces">
-    <div class="piece">
+    <div class="piece tilt">
       <span class="label">Server — C++</span>
       <h3>One loop, every client</h3>
       <p>The world, the map, the players and their command queues behind a non-blocking server that holds every connection on a single event loop, with an adjustable game clock.</p>
     </div>
-    <div class="piece">
+    <div class="piece tilt">
       <span class="label">AI — Python</span>
       <h3>A state machine per drone</h3>
       <p>Each drone is an autonomous process cycling between surviving, collecting and incanting. The team reproduces through the game's <code>Fork</code> command and regroups using a sound-message encoding we had to invent.</p>
     </div>
-    <div class="piece">
+    <div class="piece tilt">
       <span class="label">Rendering — C++ / OpenGL</span>
       <h3>Twenty-four shaders</h3>
       <p>Sand terrain, animated water, star field, skeletally animated characters, auras and incantation halos. Every effect has its own vertex and fragment pair, written by hand.</p>
@@ -98,22 +136,23 @@
 <div class="wrap"><hr class="rule"></div>
 
 <section class="wrap" id="work">
-  <div class="sec-title">
+  <div class="sec-title reveal">
     <span class="label">The rest</span>
     <h2>What I have built</h2>
   </div>
-  <p class="sec-intro">To the left of each project is its Epitech module code, which says which unit it comes from: <span class="mono">OOP</span> for object orientation, <span class="mono">NWP</span> for networking, <span class="mono">CCP</span> for concurrency, <span class="mono">CNA</span> for numerical computing, <span class="mono">AIA</span> for artificial intelligence.</p>
+  <p class="sec-intro reveal">To the left of each project is its Epitech module code, which says which unit it comes from: <span class="mono">OOP</span> for object orientation, <span class="mono">NWP</span> for networking, <span class="mono">CCP</span> for concurrency, <span class="mono">CNA</span> for numerical computing, <span class="mono">AIA</span> for artificial intelligence.</p>
 
   <span class="label group-label">Engines and rendering</span>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-OOP-400<br>raytracer</span>
     <div class="entry__body">
       <h3>Raytracer</h3>
       <p>A ray tracing renderer: primitives, materials and lights described in scene files, and an architecture open to plugins so a new shape can be added without touching the core of the engine.</p>
       <p class="tech">C++ · plugins · 3D math · scene files</p>
+      <img class="entry__shot" src="../assets/img/raytracer.png" alt="A real render from this raytracer: a sphere, a hemisphere and a cylinder lit by colored point and directional lights, with visible Phong highlights and cast shadows." loading="lazy" width="1000" height="562">
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-OOP-400<br>arcade</span>
     <div class="entry__body">
       <h3>Arcade</h3>
@@ -122,7 +161,7 @@
       <p class="note">The interface was not handed to us: it had to be negotiated with another group. We spent more time agreeing on the signatures than writing the code behind them.</p>
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-OOP-400<br>tekspice</span>
     <div class="entry__body">
       <h3>NanoTekSpice</h3>
@@ -132,7 +171,7 @@
   </article>
 
   <span class="label group-label">Systems, networking and concurrency</span>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-NWP-400<br>myteams</span>
     <div class="entry__body">
       <h3>myTeams</h3>
@@ -140,7 +179,7 @@
       <p class="tech">C · sockets · application protocol · select()</p>
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-NWP-400<br>myftp</span>
     <div class="entry__body">
       <h3>myFTP</h3>
@@ -148,7 +187,7 @@
       <p class="tech">C · RFC 959 · TCP</p>
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-CCP-400<br>theplazza</span>
     <div class="entry__body">
       <h3>The Plazza</h3>
@@ -156,7 +195,7 @@
       <p class="tech">C++ · threads · IPC · mutexes</p>
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-CCP-400<br>panoramix</span>
     <div class="entry__body">
       <h3>Panoramix</h3>
@@ -166,7 +205,7 @@
   </article>
 
   <span class="label group-label">Numerical computing</span>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-CNA-400<br>stoneanalysis</span>
     <div class="entry__body">
       <h3>Stone Analysis</h3>
@@ -175,7 +214,7 @@
       <p class="note">I wrote the naive version before the fast one. Watching the computation time collapse is the moment an algorithm stops being a formula on a blackboard.</p>
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-CNA-400<br>interstonar</span>
     <div class="entry__body">
       <h3>Interstonar</h3>
@@ -185,23 +224,25 @@
   </article>
 
   <span class="label group-label">Artificial intelligence and data</span>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-AIA-401<br>starttrek</span>
     <div class="entry__body">
       <h3>Start Trek <span class="when">April → May 2026</span></h3>
       <p>Landing a lunar module under Gymnasium. I first built the baseline policies — random, then heuristic — and all the instrumentation around them: returns, episode length, termination cause. That groundwork is what a Q-learning agent, and then a DQN, were trained on and what the ablations were compared against.</p>
       <p class="tech">Python · Gymnasium · Q-learning · DQN · Bellman equation</p>
+      <img class="entry__shot" src="../assets/img/starttrek.jpg" alt="Training-reward curve from the project report, comparing the Q-learning agent against the DQN across episodes." loading="lazy" width="700" height="420">
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-AIA-400<br>cvrie</span>
     <div class="entry__body">
       <h3>DR CVRIE <span class="when">February → March 2026</span></h3>
       <p>Two halves. On one side, classifying medical images to identify the type of condition. On the other, grouping 1,010 patient testimonials by pathology and urgency — without ever showing the model a single label: the resemblance is inferred from the text alone.</p>
       <p class="tech">Python · scikit-learn · NLP · clustering · pandas</p>
+      <img class="entry__shot" src="../assets/img/cvrie.png" alt="t-SNE projection of the 1,010 patient testimonials, colored by the seven clusters K-Means found from text alone." loading="lazy" width="900" height="348">
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-AIA-410<br>codename</span>
     <div class="entry__body">
       <h3>Codename</h3>
@@ -209,7 +250,7 @@
       <p class="tech">LLM · granite3.1-moe · security · red team</p>
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-AIA-410<br>persona</span>
     <div class="entry__body">
       <h3>Persona</h3>
@@ -217,7 +258,7 @@
       <p class="tech">Docker · automation · LLM · dashboard</p>
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">Tardis</span>
     <div class="entry__body">
       <h3>Tardis <span class="when">April → May 2025</span></h3>
@@ -227,7 +268,7 @@
   </article>
 
   <span class="label group-label">Web and product</span>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">Discovery<br>VoltaLink</span>
     <div class="entry__body">
       <h3>VoltaLink</h3>
@@ -235,16 +276,17 @@
       <p class="tech">Vue 3 · Vite · Tailwind · Node · Express · WebSocket · Leaflet</p>
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">G-ING-400<br>codewash</span>
     <div class="entry__body">
       <h3>CodeWash</h3>
       <p>Taking over a React and Electron application written without any structure: auditing what was there, setting up linting, refactoring in stages and documenting.</p>
       <p class="tech">React · Electron · ESLint · refactoring</p>
       <p class="note">Improving something without breaking it takes a particular discipline: you have to resist the urge to rewrite it all from scratch.</p>
+      <img class="entry__shot" src="../assets/img/codewash.png" alt="The app after the rework: a Minecraft-themed learning game with a menu of skill challenges (reading, logic, maths, crafting), each with a level badge and HP bar." loading="lazy" width="720" height="405">
     </div>
   </article>
-  <article class="entry">
+  <article class="entry tilt reveal">
     <span class="entry__code mono">Internship<br>Bénin Codeur</span>
     <div class="entry__body">
       <h3>Alphabrique <span class="when">Sept. → Oct. 2025 · Cotonou</span></h3>
@@ -257,26 +299,26 @@
 <div class="wrap"><hr class="rule"></div>
 
 <section class="wrap" id="path">
-  <div class="sec-title">
+  <div class="sec-title reveal">
     <span class="label">Background</span>
     <h2>Where I come from</h2>
   </div>
   <div class="path">
-    <div class="step">
+    <div class="step reveal">
       <span class="label">Since Sept. 2024</span>
       <div>
         <h3>Bachelor in Information Technology</h3>
         <p>Epitech — Cotonou, Benin. Third year in progress.</p>
       </div>
     </div>
-    <div class="step">
+    <div class="step reveal">
       <span class="label">Jan. → July 2024</span>
       <div>
         <h3>English as a Foreign Language</h3>
         <p>BT Institute of Business and Technology — Accra, Ghana.</p>
       </div>
     </div>
-    <div class="step">
+    <div class="step reveal">
       <span class="label">2016 → July 2022</span>
       <div>
         <h3>Baccalauréat, science stream</h3>
@@ -289,33 +331,33 @@
 <div class="wrap"><hr class="rule"></div>
 
 <section class="wrap" id="tools">
-  <div class="sec-title">
+  <div class="sec-title reveal">
     <span class="label">Tools</span>
     <h2>What I work with</h2>
   </div>
   <div class="crafts">
-    <div class="craft">
+    <div class="craft tilt reveal">
       <h3>Low level</h3>
       <p>C and C++ daily, some Rust and Haskell. Sockets, threads, processes, manual memory management, Makefiles, Linux.</p>
     </div>
-    <div class="craft">
+    <div class="craft tilt reveal">
       <h3>Graphics</h3>
       <p>OpenGL and GLSL — lighting, skeletal animation, procedural effects. SFML, ray tracing, and the mathematics that come with them.</p>
     </div>
-    <div class="craft">
+    <div class="craft tilt reveal">
       <h3>Machine learning</h3>
       <p>Python with scikit-learn, pandas, NumPy and matplotlib. Gymnasium for reinforcement learning, Jupyter for exploring, and prompt engineering from both sides of the fence.</p>
     </div>
-    <div class="craft">
+    <div class="craft tilt reveal">
       <h3>Web</h3>
       <p>Vue 3 and React on the interface, Node and Express on the server, WebSocket when it has to be real time. Docker to package it. WordPress and WooCommerce when the need is commercial rather than technical.</p>
     </div>
   </div>
-  <p class="offbeat">French is my first language; my English is intermediate, built up over six months in Accra. Away from the code: music, MMA, video games, reading and a lot of cinema — part of what pulled me towards computer graphics in the first place.</p>
+  <p class="offbeat reveal">French is my first language; my English is intermediate, built up over six months in Accra. Away from the code: music, MMA, video games, reading and a lot of cinema — part of what pulled me towards computer graphics in the first place.</p>
 </section>
 
 <section class="closing" id="contact">
-  <div class="wrap">
+  <div class="wrap reveal">
     <h2>Let's talk<em>.</em></h2>
     <p>I am looking for an apprenticeship. If any of this is your ground, write to me — I answer quickly.</p>
     <div class="reach">
@@ -330,8 +372,9 @@
 
 <footer class="wrap">
   <hr class="rule" style="margin-bottom:2rem">
-  <p>This page is written by hand — HTML, CSS and one WebGL shader, with no libraries. August 2026.</p>
+  <p>This page is written by hand — HTML, CSS and hand-rolled WebGL/canvas, with no libraries. September 2026.</p>
 </footer>
 <script src="../assets/shader.js" defer></script>
+<script src="../assets/network.js" defer></script>
 </body>
 </html>

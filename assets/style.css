@@ -319,19 +319,21 @@ code{
 .cta svg{width:15px; height:15px; transition:transform .25s}
 .cta:hover svg{transform:translateX(3px)}
 
-/* ─────────────  réseau de particules et anneau 3D (hero)  ───────────── */
+/* ─────────────  réseau de particules et lune jouable (hero)  ───────────── */
 #network{position:absolute; inset:0; width:100%; height:100%; display:block; z-index:-1}
-.orb{position:absolute; top:8%; right:6%; width:220px; height:220px; perspective:900px; opacity:.55; pointer-events:none}
-.orb__ring{position:absolute; inset:0; transform-style:preserve-3d}
-.orb__ring i{display:block; width:100%; height:100%; border-radius:50%; border:1px solid rgba(233,168,85,.55); animation:spin 20s linear infinite}
-.orb__ring--a{transform:rotateX(78deg)}
-.orb__ring--b{transform:rotateX(78deg) rotateY(62deg)}
-.orb__ring--b i{animation-duration:26s; animation-direction:reverse; border-color:rgba(244,239,230,.35)}
-.orb__ring--c{transform:rotateY(80deg)}
-.orb__ring--c i{animation-duration:33s}
-@keyframes spin{from{transform:rotateZ(0)} to{transform:rotateZ(360deg)}}
-@media (max-width:900px){.orb{display:none}}
 .hero h1{will-change:transform}
+.moon{
+  position:absolute; top:18%; right:14%;
+  width:clamp(64px,8vw,116px); height:clamp(64px,8vw,116px);
+  border-radius:50%; z-index:3; cursor:grab; touch-action:none;
+  background:
+    radial-gradient(circle at 32% 78%, rgba(20,15,8,.4), transparent 42%),
+    radial-gradient(circle at 66% 42%, rgba(20,15,8,.3), transparent 36%),
+    radial-gradient(circle at 40% 66%, #d9cdb0, #cdbf9d 32%, #9f8c68 66%, #5f5138 100%);
+  box-shadow:0 0 46px 6px rgba(233,168,85,.28), inset -10px -10px 18px rgba(0,0,0,.4);
+}
+.moon:active{cursor:grabbing}
+@media (max-width:900px){.moon{display:none}}
 
 /* ─────────────  fil narratif (storyline)  ───────────── */
 main{position:relative}

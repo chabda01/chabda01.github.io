@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Raytracer — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Un moteur de rendu 3D par lancer de rayons : modifiez le fichier de scène et l'image se recalcule dans votre navigateur.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage.rt{grid-template-columns:minmax(0,1fr) minmax(0,400px)}
+@media (max-width:980px){
+  .stage.rt{grid-template-columns:minmax(0,1fr)}
+  .stage.rt .stage__side{box-shadow:inset 0 1px 0 var(--stage-line)}
+}
+.rt-view{position:relative; background:#000; border-radius:3px; overflow:hidden; box-shadow:0 0 0 1px var(--stage-line)}
+.rt-view canvas{width:100%; height:auto; border-radius:0; cursor:grab; touch-action:pan-y; user-select:none; -webkit-user-select:none}
+.rt-view canvas.is-drag{cursor:grabbing}
+.rt-progress{height:2px; background:var(--stage-line); overflow:hidden}
+.rt-progress i{display:block; height:100%; background:var(--gold); transform-origin:left center; transform:scaleX(0); transition:opacity .5s}
+.rt-progress.is-done i{opacity:.35}
+.rt-hint{margin:.7rem 0 1rem; font-size:.8rem !important; color:var(--stage-ink-3) !important}
+.rt-scenes{display:flex; flex-direction:column; gap:.9rem; margin-top:1.4rem; padding-top:1.2rem; box-shadow:inset 0 1px 0 var(--stage-line)}
+.rt-group{display:flex; flex-direction:column; gap:.5rem}
+.rt-group > span{font-size:.72rem; color:var(--stage-ink-3); letter-spacing:.04em}
+.rt-filebar{display:flex; align-items:baseline; justify-content:space-between; gap:.6rem; flex-wrap:wrap}
+.rt-filebar .mono{font-size:.72rem; color:var(--stage-ink-3)}
+.rt-editor textarea{height:24rem; white-space:pre; overflow:auto; tab-size:4; overflow-wrap:normal}
+.rt-actions{display:flex; flex-wrap:wrap; gap:.6rem; align-items:center}
+.rt-actions kbd{font:inherit; font-size:.72rem; color:var(--stage-ink-3)}
+.rt-msg[hidden]{display:none}
+.rt-help{font-size:.8rem; color:var(--stage-ink-2)}
+.rt-help summary{cursor:pointer; color:var(--stage-ink); font-size:.82rem}
+.rt-help summary:hover{color:var(--gold)}
+.rt-help .dtable{margin-top:.6rem; font-size:.76rem}
+.rt-help .dtable td{padding:.4rem .4rem; vertical-align:top}
+.rt-help .dtable td:first-child{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.7rem; color:var(--stage-ink); white-space:nowrap}
+.rt-help p{font-size:.76rem; margin-top:.6rem}
+.rt-schema{display:block; width:100%; height:auto; max-width:440px; margin:1.2rem 0 .4rem; color:var(--ink-2)}
+.rt-schema text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:12px; fill:var(--ink-2)}
+.rt-schema .a{stroke:var(--accent); fill:none}
+.rt-schema .af{fill:var(--accent)}
+.rt-list{margin:0 0 1rem; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.rt-list li{margin-bottom:.45em}
+.demo-cols h3{font-size:1rem; margin:1.4rem 0 .5rem}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-OOP-400 · raytracer</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Moteurs et rendu</span>
+  <h1>Raytracer</h1>
+  <p class="demo-hero__lede">Un moteur qui calcule une image 3D à partir d'un simple fichier texte. Pour chaque pixel, il lance un rayon dans la scène et calcule la couleur de ce qu'il touche : formes, lumières et ombres.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en C++. Cette page en est une version web : j'ai réécrit les mêmes calculs en JavaScript, avec le même format de fichier, pour qu'ils tournent dans votre navigateur.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage rt">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <button class="btn" type="button" id="rt-render">Rendre</button>
+        <button class="btn btn--ghost" type="button" id="rt-png" disabled>Télécharger en PNG</button>
+        <span class="stage__status" role="status" id="rt-status">Prêt</span>
+      </div>
+      <div class="rt-view">
+        <canvas id="rt-canvas" width="640" height="360" aria-label="Image calculée par le raytracer"></canvas>
+        <div class="rt-progress"><i id="rt-bar"></i></div>
+      </div>
+      <p class="rt-hint">Glissez sur l'image pour faire tourner la caméra autour de la scène. Le fichier à côté se met à jour.</p>
+      <div class="stats">
+        <div class="stat"><b id="rt-time">–</b><span>temps de rendu</span></div>
+        <div class="stat"><b id="rt-rays">–</b><span>rayons lancés</span></div>
+        <div class="stat"><b id="rt-size">–</b><span>pixels calculés</span></div>
+        <div class="stat"><b id="rt-objs">–</b><span>objets / lumières</span></div>
+      </div>
+      <div class="rt-scenes">
+        <span class="label rt-scenes-label">Scènes prêtes</span>
+        <div class="rt-group">
+          <span>Les scènes du projet, copiées telles quelles</span>
+          <div class="chips" id="rt-chips-repo"></div>
+        </div>
+        <div class="rt-group">
+          <span>Deux scènes d'usage, écrites pour cette page</span>
+          <div class="chips" id="rt-chips-metier"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <span class="label">Fichier de scène</span>
+      <label class="field rt-editor">
+        <span class="rt-filebar"><span>Modifiez le texte, puis « Rendre »</span><span class="mono" id="rt-file">scenes/demo_sphere.cfg</span></span>
+        <textarea id="rt-src" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+      </label>
+      <div class="term rt-msg" id="rt-msg" role="alert" hidden></div>
+      <div class="rt-actions">
+        <button class="btn" type="button" id="rt-render2">Rendre</button>
+        <button class="btn btn--ghost" type="button" id="rt-reset">Remettre la scène d'origine</button>
+        <kbd>ou Ctrl + Entrée</kbd>
+      </div>
+      <label class="field">Largeur de l'image
+        <select id="rt-res">
+          <option value="480">480 pixels (rapide)</option>
+          <option value="640" selected>640 pixels</option>
+          <option value="960">960 pixels</option>
+          <option value="file">Celle du fichier (plus long)</option>
+        </select>
+      </label>
+
+      <details class="rt-help">
+        <summary>Aide-mémoire du format</summary>
+        <table class="dtable">
+          <tr><td>camera</td><td>resolution, position, rotation (x : haut-bas, y : gauche-droite, en degrés), fieldOfView. L'axe Z pointe vers le haut.</td></tr>
+          <tr><td>spheres</td><td>x, y, z, r (rayon), color</td></tr>
+          <tr><td>planes</td><td>axis ("X", "Y" ou "Z"), position, color ; damier : checker, checkerScale, checkerColor</td></tr>
+          <tr><td>cylinders</td><td>center, axis, radius, color (cylindre infini)</td></tr>
+          <tr><td>cylindreslimites</td><td>comme cylinders, plus height</td></tr>
+          <tr><td>cones</td><td>apex (pointe), axis, angle, color</td></tr>
+          <tr><td>coneslimites</td><td>comme cones, plus height</td></tr>
+          <tr><td>conesfantomes</td><td>comme cones, avec les deux nappes</td></tr>
+          <tr><td>triangles</td><td>v0, v1, v2, color</td></tr>
+          <tr><td>lights</td><td>ambient (0 à 1), directional (x, y, z : direction), point (x, y, z : position) ; color en option</td></tr>
+        </table>
+        <p>Les couleurs vont de 0 à 255. L'angle d'un cône est lu en radians, comme dans le projet d'origine (la valeur va directement dans une tangente).</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Choisissez une scène.</b> Cliquez sur « Cône fantôme » ou « Packshot produit ». L'image apparaît d'abord en gros carrés, puis elle s'affine.</span></li>
+      <li><span><b>Changez une valeur.</b> Dans le fichier, modifiez la couleur d'une sphère (r, g, b de 0 à 255) ou son rayon, puis cliquez sur « Rendre ».</span></li>
+      <li><span><b>Déplacez une lumière.</b> Dans le bloc <span class="mono">lights</span>, changez x, y ou z. Les ombres bougent avec elle.</span></li>
+      <li><span><b>Tournez autour.</b> Glissez sur l'image. La caméra tourne autour de la scène, et sa position se réécrit dans le fichier.</span></li>
+      <li><span><b>Cassez le fichier.</b> Supprimez une accolade ou un champ. La page vous dit quelle ligne pose problème, et garde la dernière image.</span></li>
+    </ol>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>Un écran, c'est une grille de pixels. Pour chacun, le programme se pose une question : « qu'est-ce que la caméra voit dans cette direction ? »</p>
+    <svg class="rt-schema" viewBox="0 0 400 215" role="img" aria-label="Schéma : la caméra lance un rayon par pixel. Au point touché, un second rayon part vers la lumière pour savoir si le point est éclairé ou à l'ombre.">
+      <!-- sol -->
+      <line x1="120" y1="180" x2="392" y2="180" stroke="currentColor" stroke-width="1"/>
+      <!-- grille de pixels -->
+      <g stroke="currentColor" stroke-width="1" fill="none">
+        <rect x="78" y="96" width="12" height="70"/>
+        <path d="M78 106h12M78 116h12M78 126h12M78 136h12M78 146h12M78 156h12"/>
+      </g>
+      <rect class="af" x="78" y="116" width="12" height="10" opacity=".85"/>
+      <rect class="af" x="78" y="146" width="12" height="10" opacity=".85"/>
+      <!-- caméra -->
+      <circle cx="22" cy="130" r="5" fill="currentColor"/>
+      <!-- sphère -->
+      <circle cx="255" cy="120" r="38" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <!-- lumière -->
+      <circle class="af" cx="350" cy="28" r="6"/>
+      <path class="a" stroke-width="1.2" d="M350 12v6M350 38v6M334 28h6M360 28h6M339 17l4 4M357 35l4 4M361 17l-4 4M343 35l-4 4"/>
+      <!-- rayons de la caméra -->
+      <line x1="22" y1="130" x2="223" y2="100" stroke="currentColor" stroke-width="1.3"/>
+      <line x1="22" y1="130" x2="170" y2="180" stroke="currentColor" stroke-width="1.3"/>
+      <circle cx="223" cy="100" r="3" fill="currentColor"/>
+      <circle cx="170" cy="180" r="3" fill="currentColor"/>
+      <!-- rayons vers la lumière -->
+      <line class="a" x1="223" y1="100" x2="343" y2="32" stroke-width="1.3" stroke-dasharray="4 3"/>
+      <line class="a" x1="170" y1="180" x2="221" y2="137" stroke-width="1.3" stroke-dasharray="4 3"/>
+      <path class="a" stroke-width="1.6" d="M216 132l10 10M226 132l-10 10"/>
+      <!-- légendes -->
+      <text x="6" y="152">caméra</text>
+      <text x="52" y="86">un rayon par pixel</text>
+      <text x="310" y="60">lumière</text>
+      <text x="184" y="86">éclairé</text>
+      <text x="128" y="200">à l'ombre : la sphère bloque</text>
+    </svg>
+    <ol class="rt-list">
+      <li><b>Lire le fichier.</b> Il décrit la caméra, les formes et les lumières.</li>
+      <li><b>Lancer un rayon par pixel.</b> Le rayon part de la caméra et traverse le pixel.</li>
+      <li><b>Trouver ce qu'il touche.</b> Chaque forme a sa formule : sphère, plan, cylindre, cône, triangle. On garde l'objet le plus proche. Si rien n'est touché, le pixel reste noir.</li>
+      <li><b>Regarder vers chaque lumière.</b> Un second rayon part du point touché. Si un objet est sur le chemin, le point est à l'ombre. Sinon, plus la surface fait face à la lumière, plus elle est claire. S'y ajoute un petit reflet brillant (modèle de Phong).</li>
+      <li><b>Assombrir les creux.</b> Seize rayons courts partent autour du point. Plus ils sont bloqués, plus le point est sombre. C'est ce qui marque le contact entre un objet et le sol.</li>
+    </ol>
+    <h3>Ce qui change par rapport au C++</h3>
+    <p>Le projet d'origine écrit un fichier image PPM et ouvre une fenêtre. Chaque forme y est un plugin chargé au démarrage, et le fichier est lu par la bibliothèque libconfig++. Ici, j'ai écrit un petit lecteur pour ce même format.</p>
+    <p>J'ai ajouté pour le web : le calcul en arrière-plan avec affichage progressif, le choix de la largeur, la caméra à la souris, l'export PNG et un cache : une image déjà calculée est gardée dans votre navigateur et s'affiche tout de suite la fois suivante. Le code C++ contient aussi des reflets miroir et de la transparence, mais le fichier de scène ne permet pas de les régler : je ne les ai pas repris.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Visuels de produit</h3><p>Montrer un produit sous plusieurs couleurs ou plusieurs angles sans refaire de séance photo. Ici, changer une teinte revient à changer une ligne.</p></div>
+    <div><h3>Maquettes et avant-projets</h3><p>Poser des volumes simples, déplacer le soleil et voir où tombent les ombres avant de lancer une étude plus lourde.</p></div>
+    <div><h3>Images produites par un script</h3><p>La scène est un fichier texte. Un programme peut donc l'écrire, la versionner et lancer des séries de rendus sans intervention.</p></div>
+    <div><h3>Ce que ce projet montre</h3><p>Du C++ orienté objet, une architecture à plugins, un format de fichier à lire proprement, et des maths appliquées qu'il faut vérifier par des tests.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="scenes.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

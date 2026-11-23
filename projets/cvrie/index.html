@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DR CVRIE — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Écrivez un témoignage de patient : la page le range dans un groupe sans avoir jamais vu d'étiquette. Second volet : classer des IRM cérébrales.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.cv-volet{display:flex; align-items:baseline; gap:.8rem; flex-wrap:wrap; margin-bottom:.9rem}
+.cv-volet h2{font-size:clamp(1.5rem,3.2vw,1.9rem)}
+.cv-volet p{color:var(--ink-3); font-size:.92rem}
+.stage + .cv-volet,.cv-gap{margin-top:2.6rem}
+.cv-note{font-size:.8rem !important; color:var(--stage-ink-3) !important; line-height:1.5}
+.cv-entry textarea{min-height:5.2rem; font-family:inherit; font-size:.92rem}
+.cv-entry .chips{margin:.6rem 0 .8rem}
+.stage__status b{color:var(--stage-ink); font-weight:600}
+.cv-dot{display:inline-block; width:.7em; height:.7em; border-radius:50%; margin-right:.4em; vertical-align:baseline; flex:none}
+
+/* carte */
+.cv-map{position:relative; margin-top:1rem; background:#0F0D0A; border-radius:4px; box-shadow:inset 0 0 0 1px var(--stage-line)}
+.cv-map canvas{width:100%; touch-action:pan-y; cursor:crosshair}
+.cv-tip{
+  position:absolute; z-index:3; pointer-events:none; max-width:min(280px,80%); padding:.5rem .65rem;
+  background:#231E17; color:var(--stage-ink-2); border-radius:4px; font-size:.76rem; line-height:1.45;
+  box-shadow:0 0 0 1px var(--stage-line),0 10px 24px -12px #000;
+}
+.cv-tip b{display:block; color:var(--stage-ink); font-weight:600; margin-bottom:.15rem}
+.cv-km{display:flex; flex-wrap:wrap; align-items:center; gap:.6rem .8rem; margin-top:1rem}
+.cv-km .field{flex:1 1 170px; max-width:260px}
+.cv-kmstats{display:flex; flex-wrap:wrap; gap:.3rem 1.2rem; margin-top:.7rem; font-size:.8rem; color:var(--stage-ink-3)}
+.cv-kmstats b{color:var(--stage-ink); font-weight:600; font-variant-numeric:tabular-nums}
+.cv-legend{margin-top:1rem; overflow-x:auto}
+.cv-legend td:nth-child(2){text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+.cv-legend th:nth-child(2){text-align:right}
+.cv-legend button{
+  font:inherit; color:var(--stage-ink); background:none; border:0; padding:.1rem 0; cursor:pointer; text-align:left;
+  display:inline-flex; align-items:center;
+}
+.cv-legend button:hover,.cv-legend button[aria-pressed="true"]{color:var(--gold)}
+.cv-legend button:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.cv-legend .cv-words{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.72rem; color:var(--stage-ink-3)}
+
+/* résultat */
+.cv-found{font-family:"Instrument Serif",Georgia,serif; font-size:1.55rem; line-height:1.15; color:var(--stage-ink); display:flex; align-items:baseline}
+.cv-found .cv-dot{width:.5em; height:.5em; transform:translateY(-.12em)}
+.cv-bars{display:grid; gap:.4rem; margin:0; padding:0; list-style:none}
+.cv-bars li{display:grid; grid-template-columns:minmax(0,7.5rem) minmax(0,1fr) 3.4rem; align-items:center; gap:.5rem; font-size:.78rem; color:var(--stage-ink-2)}
+.cv-bars .cv-w{overflow-wrap:anywhere; line-height:1.25}
+.cv-bars .cv-w small{display:block; font-size:.66rem; color:var(--stage-ink-3)}
+.cv-bars .cv-track{height:10px; position:relative}
+.cv-bars .cv-fill{position:absolute; left:0; top:0; bottom:0; border-radius:0 4px 4px 0; min-width:2px}
+.cv-bars .cv-v{text-align:right; font-variant-numeric:tabular-nums; color:var(--stage-ink)}
+.cv-bars--words li{grid-template-columns:minmax(0,6.5rem) minmax(0,1fr)}
+.cv-near{display:grid; gap:.6rem; margin:0; padding:0; list-style:none}
+.cv-near li{font-size:.8rem; line-height:1.5; color:var(--stage-ink-2); padding-left:.8rem; box-shadow:inset 2px 0 0 var(--c,var(--stage-line))}
+.cv-near small{display:block; font-size:.7rem; color:var(--stage-ink-3)}
+.cv-block{display:flex; flex-direction:column; gap:.55rem}
+
+/* images */
+.cv-thumbs{display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:.6rem}
+@media (max-width:1040px){.cv-thumbs{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:480px){.cv-thumbs{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.cv-thumb{position:relative; padding:0; border:0; background:#000; border-radius:4px; overflow:hidden; cursor:pointer; aspect-ratio:1; box-shadow:0 0 0 1px var(--stage-line)}
+.cv-thumb img{display:block; width:100%; height:100%; object-fit:cover; opacity:.86; transition:opacity .2s}
+.cv-thumb:hover img,.cv-thumb.is-on img{opacity:1}
+.cv-thumb.is-on{box-shadow:0 0 0 2px var(--gold)}
+.cv-thumb:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.cv-thumb span{position:absolute; left:4px; bottom:4px; font-size:.66rem; font-weight:600; padding:.1rem .4rem; border-radius:999px; background:rgba(12,10,8,.86)}
+.cv-thumb span.ok{color:var(--ok)} .cv-thumb span.bad{color:var(--bad)}
+.cv-drop{
+  margin-top:.9rem; display:flex; flex-wrap:wrap; align-items:center; gap:.6rem 1rem; padding:.8rem 1rem;
+  border:1px dashed var(--stage-line); border-radius:4px; font-size:.84rem; color:var(--stage-ink-2);
+}
+.cv-drop.is-over{border-color:var(--gold); background:rgba(233,168,85,.07)}
+.cv-drop input{position:absolute; width:1px; height:1px; opacity:0}
+.cv-drop label.btn:focus-within{outline:2px solid var(--gold); outline-offset:2px}
+.cv-seen{display:flex; gap:.9rem; align-items:center}
+.cv-seen canvas{width:96px; height:96px; image-rendering:pixelated; background:#000; box-shadow:0 0 0 1px var(--stage-line); flex:none}
+.cv-verdict{font-size:.84rem; color:var(--stage-ink-2); line-height:1.5}
+.cv-verdict b{color:var(--stage-ink)}
+.cv-verdict .ok{color:var(--ok); font-weight:600} .cv-verdict .bad{color:var(--bad); font-weight:600}
+.cv-warn{
+  margin-top:1rem; padding:.75rem .9rem; border-radius:4px; font-size:.84rem !important; line-height:1.5;
+  color:var(--stage-ink) !important; background:rgba(224,119,95,.1); box-shadow:inset 3px 0 0 var(--bad);
+}
+
+/* schémas */
+.cv-flow{list-style:none; margin:.4rem 0 1.2rem; padding:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.5rem; counter-reset:flux}
+@media (max-width:1100px){.cv-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cv-flow li{
+  counter-increment:flux; padding:.6rem .7rem; border-radius:4px; background:var(--surface);
+  box-shadow:inset 0 0 0 1px var(--rule); font-size:.8rem; line-height:1.4; color:var(--ink-2);
+}
+.cv-flow li b{display:block; color:var(--ink); font-weight:600; font-size:.86rem}
+.cv-flow li b::before{content:counter(flux) " → "; color:var(--accent); font-weight:400}
+.cv-how h3{font-size:1.05rem; margin:1.4rem 0 .5rem}
+.cv-how h3:first-of-type{margin-top:0}
+.cv-facts{margin:0 0 1rem; padding-left:1.1rem; color:var(--ink-2)}
+.cv-facts li{margin-bottom:.4em; max-width:60ch}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-AIA-400 · cvrie</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Intelligence artificielle et données</span>
+  <h1>DR CVRIE</h1>
+  <p class="demo-hero__lede">Écrivez un témoignage de patient : la page le range avec ceux qui lui ressemblent, sans qu'on ait jamais dit au modèle quels groupes existent. Second volet : reconnaître le type de tumeur sur une IRM du cerveau.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en Python, avec scikit-learn. Cette page en est une version web. Pour les textes, c'est le même calcul, refait en JavaScript dans votre navigateur avec le modèle exporté du projet. Pour les images, c'est un modèle allégé, différent de celui du projet.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="cv-volet"><h2>Volet 1 · Regrouper des témoignages</h2><p>apprentissage sans étiquettes</p></div>
+  <div class="stage" id="textes">
+    <div class="stage__main">
+      <div class="cv-entry">
+        <label class="field">Un témoignage, en anglais comme dans le jeu de données
+          <textarea id="t-input" rows="3" spellcheck="false" placeholder="My knee hurts when I climb stairs…"></textarea>
+        </label>
+        <div class="chips" id="t-examples" aria-label="Exemples"></div>
+        <div class="stage__bar">
+          <button class="btn" type="button" id="t-go">Classer ce texte</button>
+          <button class="btn btn--ghost" type="button" id="t-random">Un témoignage au hasard</button>
+          <span class="stage__status" role="status" id="t-status">Chargement…</span>
+        </div>
+      </div>
+
+      <div class="cv-map" id="t-mapbox">
+        <canvas id="t-map" role="img" aria-label="Carte des témoignages : chaque point est un témoignage, coloré selon son groupe. Le détail par groupe est dans le tableau sous la carte."></canvas>
+        <div class="cv-tip" id="t-tip" hidden></div>
+      </div>
+
+      <div class="cv-km">
+        <label class="field"><span>Nombre de groupes : k = <b id="k-val">7</b></span>
+          <input type="range" id="k-range" min="2" max="8" step="1" value="7">
+        </label>
+        <button class="btn" type="button" id="k-run">Relancer k-means</button>
+        <button class="btn btn--ghost" type="button" id="k-step">Un tour à la fois</button>
+        <button class="btn btn--ghost" type="button" id="k-reset" disabled>Résultat du projet</button>
+      </div>
+      <div class="cv-kmstats" id="k-stats" role="status"></div>
+
+      <div class="cv-legend">
+        <table class="dtable">
+          <thead><tr><th>Groupe</th><th>Textes</th><th>Mots dominants</th></tr></thead>
+          <tbody id="t-legend"></tbody>
+        </table>
+      </div>
+      <p class="cv-note" id="t-legendnote" style="margin-top:.6rem">Les noms des groupes sont posés par moi, après coup, en lisant leurs mots dominants. Le modèle n'a jamais vu d'étiquette. Cliquez sur un groupe pour l'isoler sur la carte.</p>
+    </div>
+
+    <div class="stage__side">
+      <div class="cv-block">
+        <span class="label">Groupe trouvé</span>
+        <div class="cv-found" id="t-found">—</div>
+        <p class="cv-note" id="t-foundnote">Écrivez un texte ou cliquez sur un exemple.</p>
+      </div>
+      <div class="cv-block">
+        <span class="label">Mots qui ont pesé</span>
+        <ul class="cv-bars cv-bars--words" id="t-words"></ul>
+        <p class="cv-note" id="t-wordsnote">Barre longue : le mot tire fort vers ce groupe.</p>
+      </div>
+      <div class="cv-block">
+        <span class="label">Témoignages voisins</span>
+        <ul class="cv-near" id="t-near"></ul>
+      </div>
+      <p class="cv-note">Données : <span id="t-n">1 011</span> témoignages du fichier <span class="mono">Student_Dataset.csv</span>, fourni par Epitech pour ce projet. Textes anonymes : ni nom, ni date, ni contact.</p>
+    </div>
+  </div>
+
+  <div class="cv-volet cv-gap"><h2>Volet 2 · Classer des IRM</h2><p>apprentissage avec étiquettes</p></div>
+  <div class="stage" id="images">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <span class="label">Douze images du jeu de test</span>
+        <span class="stage__status" role="status" id="i-status">Chargement…</span>
+      </div>
+      <div class="cv-thumbs" id="i-thumbs"></div>
+      <div class="cv-drop" id="i-drop">
+        <label class="btn btn--ghost">Choisir une image<input type="file" id="i-file" accept="image/*"></label>
+        <span>ou déposez-la ici. Elle reste dans votre navigateur, rien n'est envoyé.</span>
+      </div>
+      <p class="cv-warn"><b>Démonstration technique, pas un outil de diagnostic.</b> Ce modèle se trompe environ une fois sur sept. Il répond toujours par l'une des quatre classes, même devant une photo qui n'est pas une IRM.</p>
+    </div>
+    <div class="stage__side">
+      <div class="cv-block">
+        <span class="label">Prédiction</span>
+        <div class="cv-seen">
+          <canvas id="i-seen" width="64" height="64" aria-label="L'image réduite à 64 × 64 pixels, telle que le modèle la reçoit"></canvas>
+          <p class="cv-verdict" id="i-verdict">Cliquez sur une image. Voici ce que le modèle reçoit : 64 × 64 pixels en gris.</p>
+        </div>
+        <ul class="cv-bars" id="i-probs"></ul>
+      </div>
+      <div class="cv-block">
+        <span class="label">Précision sur les 1 600 images de test</span>
+        <ul class="cv-bars" id="i-models"></ul>
+        <p class="cv-note" id="i-modelsnote">La première ligne est mesurée sur le modèle de cette page. Les trois autres viennent du projet d'origine.</p>
+      </div>
+      <p class="cv-note">Images : <i>Brain Tumor MRI Dataset</i>, jeu public diffusé sur Kaggle, celui utilisé dans le projet. Vignettes réduites à 128 pixels.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Cliquez sur un exemple</b>, « Genou » ou « Brûlure ». Le groupe trouvé s'affiche à droite, avec les mots qui ont compté.</span></li>
+      <li><span><b>Regardez la carte.</b> Le point doré, c'est votre texte. Il se pose à côté des témoignages qui lui ressemblent. Passez la souris sur un point pour lire le témoignage.</span></li>
+      <li><span><b>Écrivez votre propre phrase</b>, en anglais. Mélangez deux sujets (« itchy rash and a sore throat ») et voyez quel mot l'emporte.</span></li>
+      <li><span><b>Mettez k sur 3, puis cliquez sur « Relancer k-means ».</b> Les points partent en gris, puis les groupes se forment tour après tour. « Un tour à la fois » permet d'avancer à la main.</span></li>
+      <li><span><b>Dans le volet 2, cliquez sur une IRM.</b> Vous voyez la réponse du modèle, ses hésitations classe par classe, et si elle est juste. J'ai gardé exprès quatre cas ratés sur douze.</span></li>
+    </ol>
+  </div>
+  <div class="cv-how">
+    <h2>Comment ça marche</h2>
+    <h3>Les textes</h3>
+    <ol class="cv-flow" aria-label="Chaîne de traitement des textes">
+      <li><b>Nettoyer</b>minuscules, lettres seules, mots vides retirés</li>
+      <li><b>Compter</b>TF-IDF : 2 446 mots et paires de mots</li>
+      <li><b>Résumer</b>40 thèmes (NMF)</li>
+      <li><b>Regrouper</b>k-means, 7 groupes</li>
+    </ol>
+    <p>Un mot rare dans l'ensemble mais présent dans un texte reçoit un gros poids : c'est le TF-IDF. Chaque texte devient ainsi une liste de 2 446 nombres. Je la résume en 40 nombres, puis k-means fait le reste : il pose k centres, rattache chaque texte au centre le plus proche, déplace les centres, et recommence jusqu'à ce que plus rien ne bouge.</p>
+    <p>Dans le projet, j'ai essayé k de 4 à 17. C'est k = 7 qui sépare le mieux les groupes (score de silhouette : 0,278).</p>
+    <ul class="cv-facts">
+      <li>La carte est une vue aplatie en 2D (t-SNE), calculée en Python. Les groupes, eux, sont calculés sur les 40 nombres.</li>
+      <li>Un texte nouveau passe par le même chemin que la commande <span class="mono">--predict</span> du projet. J'ai vérifié sur <span id="h-check">1 021</span> textes : la page donne le même groupe que Python à chaque fois.</li>
+      <li>Limite connue : ce chemin ne retrouve le groupe d'origine que pour <span id="h-agree">87</span> % des témoignages du jeu. Un point doré peut donc tomber parmi des points d'une autre couleur.</li>
+    </ul>
+    <h3>Les images</h3>
+    <ol class="cv-flow" aria-label="Chaîne de traitement des images">
+      <li><b>Griser</b>moyenne du rouge, du vert et du bleu</li>
+      <li><b>Réduire</b>64 × 64 pixels, soit 4 096 nombres</li>
+      <li><b>Centrer</b>même échelle pour chaque pixel</li>
+      <li><b>Classer</b>4 classes possibles</li>
+    </ol>
+    <p>Les trois premières étapes sont celles du projet. Dans le projet, j'ai comparé trois modèles : la forêt aléatoire gagne avec 85,38 %. Elle pèse 7 Mo, trop pour une page web. Ici, j'ai entraîné à la place un petit réseau de neurones (une couche de 24 neurones) sur les mêmes 5 600 images. Je l'ai mesuré sur les mêmes 1 600 images de test : <span id="h-acc">84,94</span> %.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Trier sans étiqueter</h3><p>Tickets de support, avis clients, mails entrants : le même procédé les range par sujet, sans que personne ne les classe à la main d'abord.</p></div>
+    <div><h3>Repérer l'urgent</h3><p>Un nouveau message rejoint son groupe dès l'arrivée. Les groupes sensibles passent en tête de file.</p></div>
+    <div><h3>Contrôler à l'image</h3><p>Pièce bonne ou défectueuse, document lisible ou non : un modèle léger suffit souvent pour un premier tri visuel.</p></div>
+    <div><h3>Expliquer la réponse</h3><p>La page montre les mots qui ont pesé et les cas voisins. Un métier peut vérifier pourquoi un texte est tombé là.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

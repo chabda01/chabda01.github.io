@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SensAI — démo · Chabda Gbemetonou</title>
+<meta name="description" content="La mémoire d'un assistant IA local, à tester dans le navigateur : ce qui est enregistré, ce qui est relu au lancement, ce qui est résumé quand la conversation devient trop longue.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage{--user:#8FB8E8; --sys:#C9A0DC; color-scheme:dark}
+.stage .mono,.cmd,.pm__txt,.pm__role,.dtable td.num{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.note{font-size:.86rem; color:var(--stage-ink-2); margin:-.2rem 0 .9rem; min-height:2.7em; padding-left:.8rem; box-shadow:inset 2px 0 0 var(--gold)}
+
+/* jauge du budget */
+.meter{margin-bottom:1rem}
+.meter__bar{position:relative; height:10px; border-radius:5px; background:#0F0D0A; box-shadow:inset 0 0 0 1px var(--stage-line); overflow:hidden}
+.meter__fill{height:100%; width:0; background:var(--ok); border-radius:5px 0 0 5px; transition:width .25s ease, background .25s}
+.meter.is-hot .meter__fill{background:var(--bad)}
+.meter__tick{position:absolute; top:-2px; bottom:-2px; left:90%; width:2px; background:var(--gold)}
+.meter__txt{display:flex; justify-content:space-between; gap:.6rem; font-size:.74rem; color:var(--stage-ink-3); margin-top:.3rem}
+
+/* fil de discussion */
+.chat{height:310px; overflow-y:auto; background:#0F0D0A; border-radius:4px; box-shadow:inset 0 0 0 1px var(--stage-line);
+  padding:.8rem; display:flex; flex-direction:column; gap:.7rem; overscroll-behavior:contain}
+.msg{max-width:88%; padding:.55rem .7rem; border-radius:6px; background:rgba(255,255,255,.04); box-shadow:inset 0 0 0 1px var(--stage-line)}
+.msg--user{align-self:flex-end; background:rgba(143,184,232,.08)}
+.msg--assistant{align-self:flex-start}
+.msg.is-old,.sep.is-old{opacity:.45}
+.msg__who{display:block; font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; color:var(--stage-ink-3); margin-bottom:.15rem}
+.msg--user .msg__who{color:var(--user)}
+.stage .msg__txt{color:var(--stage-ink); font-size:.9rem; line-height:1.5; margin:0; white-space:pre-wrap; overflow-wrap:anywhere}
+.msg__tags{display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.45rem}
+.tag{font-size:.66rem; padding:.08rem .45rem; border-radius:3px; color:var(--stage-ink-3); box-shadow:inset 0 0 0 1px var(--stage-line); white-space:nowrap}
+.tag--s0{color:var(--stage-ink-3); text-decoration:line-through}
+.tag--s2{color:var(--gold); box-shadow:inset 0 0 0 1px rgba(233,168,85,.5)}
+.tag--vol{color:var(--bad); box-shadow:inset 0 0 0 1px var(--bad)}
+.tag--ex,.tag--test{color:var(--stage-ink-2); box-shadow:inset 0 0 0 1px var(--stage-ink-3); font-style:italic}
+.tag--real{color:var(--ok); box-shadow:inset 0 0 0 1px var(--ok)}
+.sep{align-self:stretch; text-align:center; font-size:.72rem; color:var(--stage-ink-3); padding:.2rem 0;
+  background:linear-gradient(var(--stage-line),var(--stage-line)) left 50%/100% 1px no-repeat}
+.composer{display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .7rem; margin-top:.7rem}
+.composer input[type="text"]{flex:1 1 220px; min-width:0; font:inherit; font-size:.9rem; color:var(--stage-ink); background:#0F0D0A;
+  border:1px solid var(--stage-line); border-radius:4px; padding:.55rem .7rem}
+.composer input[type="text"]:focus-visible,.stage select:focus-visible,.chip:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.check{display:inline-flex; align-items:center; gap:.4rem; font-size:.8rem; color:var(--stage-ink-2); cursor:pointer}
+.check input{accent-color:var(--gold); width:1rem; height:1rem}
+
+/* onglets et panneaux */
+.tabs{display:flex; flex-wrap:wrap; gap:.4rem; margin:1.3rem 0 .9rem; padding-top:1.1rem; box-shadow:inset 0 1px 0 var(--stage-line)}
+.tabs .chip{font-size:.82rem; padding:.42rem .9rem}
+.pane[hidden]{display:none}
+.pane > p{margin-bottom:.7rem; max-width:68ch; font-size:.84rem}
+.scroll{max-height:400px; overflow:auto; overscroll-behavior:contain}
+.pm{border-radius:4px; background:#0F0D0A; box-shadow:inset 0 0 0 1px var(--stage-line), inset 3px 0 0 var(--stage-ink-3); margin-bottom:.45rem; padding:.5rem .7rem .55rem .85rem}
+.pm--user{box-shadow:inset 0 0 0 1px var(--stage-line), inset 3px 0 0 var(--user)}
+.pm--system{box-shadow:inset 0 0 0 1px var(--stage-line), inset 3px 0 0 var(--sys)}
+.pm--sum{box-shadow:inset 0 0 0 1px var(--stage-line), inset 3px 0 0 var(--gold); background:rgba(233,168,85,.06)}
+.pm--prof{box-shadow:inset 0 0 0 1px var(--stage-line), inset 3px 0 0 var(--ok)}
+.pm__head{display:flex; flex-wrap:wrap; align-items:baseline; gap:.3rem .6rem; margin-bottom:.25rem}
+.pm__role{font-size:.72rem; color:var(--stage-ink)}
+.pm__kind{font-size:.66rem; letter-spacing:.06em; text-transform:uppercase; color:var(--gold)}
+.pm__tok{margin-left:auto; font-size:.68rem; color:var(--stage-ink-3)}
+.pm__txt{margin:0; font-size:.76rem; line-height:1.55; color:var(--stage-ink-2); white-space:pre-wrap; overflow-wrap:anywhere}
+.empty{font-size:.8rem; color:var(--stage-ink-3); font-style:italic}
+.dtable td.txt{max-width:0; width:60%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.dtable td.num{font-size:.76rem}
+.dtable tr.is-vol td{color:var(--bad)}
+.dtable tr.is-vol td.txt{text-decoration:line-through; text-decoration-color:rgba(224,119,95,.5)}
+.dbwrap{overflow-x:auto}
+.dbwrap .dtable{min-width:430px}
+.pane h3{margin:1rem 0 .4rem; font-family:"JetBrains Mono",ui-monospace,monospace; font-weight:400; font-size:.8rem; color:var(--gold)}
+.pane h3:first-of-type{margin-top:0}
+.term{max-height:400px; font-size:.74rem}
+
+/* colonne de réglages */
+.cmd{font-size:.72rem; line-height:1.5; color:var(--gold); background:#0C0A08; border-radius:4px; padding:.5rem .6rem; overflow-wrap:anywhere; box-shadow:inset 0 0 0 1px var(--stage-line)}
+.side-block{display:flex; flex-direction:column; gap:.6rem}
+.side-block p{font-size:.78rem; color:var(--stage-ink-3)}
+.pair{display:grid; grid-template-columns:1fr 1fr; gap:.5rem}
+.prof-form{display:grid; grid-template-columns:1fr 1fr; gap:.5rem}
+.prof-form .btn{grid-column:1/-1; justify-content:center}
+.stats .stat b{font-size:1.35rem}
+
+/* schéma */
+.schema{margin:1.2rem 0; padding:1rem 1.1rem; border-radius:6px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--rule)}
+.schema svg{display:block; width:100%; height:auto; max-width:460px}
+.schema figcaption{font-size:.84rem; color:var(--ink-3); margin-top:.6rem}
+.schema text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:11px; fill:var(--ink-2)}
+.schema .bx{fill:var(--ground); stroke:var(--ink-3); stroke-width:1}
+.schema .bx--me{stroke:var(--accent); stroke-width:1.5}
+.schema .ar{stroke:var(--ink-3); stroke-width:1.2; fill:none}
+.schema .ar--me{stroke:var(--accent)}
+.schema .hd{fill:var(--ink); font-weight:600}
+.schema .sm{font-size:9.5px; fill:var(--ink-3)}
+.how h3{font-size:1rem; margin:1.4rem 0 .4rem}
+.how code,.steps code{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.82em; color:var(--ink)}
+.addons{margin:.4rem 0 0; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.addons li{margin-bottom:.35rem}
+@media (max-width:520px){
+  .chat{height:280px}
+  .msg{max-width:96%}
+}
+@media (prefers-reduced-motion:reduce){ .meter__fill{transition:none} }
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-AIA-500 · sensai</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Intelligence artificielle et données</span>
+  <h1>SensAI</h1>
+  <p class="demo-hero__lede">Un assistant IA qui tourne sur la machine de l'utilisateur, construit à quatre sur Ollama. Projet en cours. Ma part est la mémoire : ce que l'assistant garde d'un lancement à l'autre, et comment il fait de la place quand la conversation devient trop longue.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en Python et parle à un modèle local (qwen3:8b). Un navigateur ne peut pas faire tourner ce modèle. Cette page montre donc seulement ma partie, la mémoire : les mêmes règles, réécrites en JavaScript. Les réponses de l'assistant affichées ici sont des exemples écrits à la main, sauf une, qui est signalée. Aucune n'est générée dans cette page.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage" id="stage">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <button class="btn" type="button" id="next">Message suivant</button>
+        <button class="btn btn--ghost" type="button" id="restart">Fermer et relancer</button>
+        <button class="btn btn--ghost" type="button" id="reset">Tout effacer</button>
+        <span class="stage__status" role="status" id="status">Prêt</span>
+      </div>
+      <p class="note" id="note">Une conversation fictive est prête. Cliquez sur « Message suivant » pour l'envoyer tour par tour, ou écrivez vos propres messages.</p>
+
+      <div class="meter" id="meter">
+        <div class="meter__bar" aria-hidden="true"><div class="meter__fill" id="meter-fill"></div><div class="meter__tick"></div></div>
+        <div class="meter__txt"><span id="meter-txt"></span><span>trait doré : 90 %</span></div>
+      </div>
+
+      <div class="chat" id="chat" aria-live="polite" aria-label="Conversation"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <input type="text" id="line" maxlength="400" placeholder="Écrivez un message…" aria-label="Votre message">
+        <label class="check"><input type="checkbox" id="vol">outil ou web utilisé (volatile)</label>
+        <button class="btn btn--ghost" type="submit">Envoyer</button>
+      </form>
+
+      <div class="tabs" id="tabs" role="group" aria-label="Ce que fait la mémoire">
+        <button class="chip" type="button" data-pane="pane-prompt" aria-pressed="true">Envoyé au modèle</button>
+        <button class="chip" type="button" data-pane="pane-db" aria-pressed="false">Base SQLite</button>
+        <button class="chip" type="button" data-pane="pane-log" aria-pressed="false">Journal</button>
+      </div>
+
+      <div class="pane" id="pane-prompt">
+        <p>La liste de messages gardée en mémoire. C'est elle, telle quelle, qui part vers Ollama à chaque tour.</p>
+        <div class="scroll" id="prompt"></div>
+      </div>
+
+      <div class="pane" id="pane-db" hidden>
+        <p>Ce qui est sur le disque. La session en cours est en clair, les lignes volatiles en rouge. La compression ne touche jamais à cette base.</p>
+        <h3>messages</h3>
+        <div class="dbwrap scroll">
+          <table class="dtable">
+            <thead><tr><th>id</th><th>session_id</th><th>role</th><th>content</th><th>volatile</th></tr></thead>
+            <tbody id="db-rows"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="db-empty">Aucune ligne.</p>
+        <p class="empty" id="db-more" hidden>Seules les 80 dernières lignes sont affichées.</p>
+        <h3>profile</h3>
+        <table class="dtable">
+          <thead><tr><th>key</th><th>value</th></tr></thead>
+          <tbody id="prof-rows"></tbody>
+        </table>
+        <p class="empty" id="prof-empty">Aucune ligne. Ajoutez-en une dans la colonne « Profil ».</p>
+      </div>
+
+      <div class="pane" id="pane-log" hidden>
+        <p>Les appels faits au module mémoire, avec les noms des fonctions du projet.</p>
+        <div class="term" id="log" tabindex="0" aria-label="Journal de la mémoire"></div>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <div class="side-block">
+        <span class="label">Lancement</span>
+        <div class="cmd" id="cmd"></div>
+        <div class="pair">
+          <label class="field">Session
+            <select id="session"><option value="default">default</option><option value="session-2">session-2</option></select>
+          </label>
+          <label class="field">Scénario
+            <select id="scenario"><option value="">(aucun)</option><option value="coding">coding</option><option value="robotics">robotics</option><option value="tutor">tutor</option><option value="concis">concis</option></select>
+          </label>
+        </div>
+        <div class="pair">
+          <label class="field">max_tokens
+            <select id="maxtok"><option value="250">250</option><option value="500">500 (démo)</option><option value="1000">1000</option><option value="4096">4096 (projet)</option></select>
+          </label>
+          <label class="field">keep_last
+            <select id="keep"><option value="2">2</option><option value="4">4</option><option value="6">6 (projet)</option></select>
+          </label>
+        </div>
+        <p>Ces réglages sont lus au démarrage. En changer un relance le programme.</p>
+      </div>
+
+      <div class="side-block">
+        <span class="label">Profil</span>
+        <form class="prof-form" id="prof-form" autocomplete="off">
+          <label class="field">Clé<input type="text" id="pkey" maxlength="30" placeholder="language"></label>
+          <label class="field">Valeur<input type="text" id="pval" maxlength="80" placeholder="fr"></label>
+          <button class="btn btn--ghost" type="submit">Enregistrer dans le profil</button>
+        </form>
+        <p>Le profil est relu et placé en tête de liste à chaque lancement.</p>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><b id="st-tok">0</b><span>tokens estimés</span></div>
+        <div class="stat"><b id="st-mem">0</b><span>messages en mémoire</span></div>
+        <div class="stat"><b id="st-disk">0</b><span>lignes sur le disque</span></div>
+        <div class="stat"><b id="st-comp">0</b><span>compressions</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Cliquez trois fois sur « Message suivant ».</b> Chaque message reçoit une taille estimée et un score. La jauge se remplit. « merci » a un score de 0.</span></li>
+      <li><span><b>Continuez jusqu'au septième message.</b> La jauge passe le trait doré : les plus anciens messages sont remplacés par un résumé. Ouvrez l'onglet « Journal » pour voir ce qui a été écarté.</span></li>
+      <li><span><b>Ouvrez « Base SQLite ».</b> Tout y est encore, mot pour mot. Les deux lignes de l'horloge sont marquées volatile.</span></li>
+      <li><span><b>Cliquez sur « Fermer et relancer ».</b> L'historique revient du disque. Le tour de l'horloge n'est pas relu. Le résumé a disparu : il n'existait qu'en mémoire.</span></li>
+      <li><span><b>Ajoutez une ligne au profil, puis relancez.</b> Par exemple <code>language</code> et <code>fr</code>. Elle apparaît en tête de la liste envoyée au modèle. Écrivez ensuite vos propres messages.</span></li>
+    </ol>
+  </div>
+  <div class="how">
+    <h2>Comment ça marche</h2>
+    <p>Un modèle de langage n'a pas de mémoire. À chaque tour, on lui renvoie toute la conversation. Ma partie décide de ce que contient cette liste.</p>
+
+    <figure class="schema">
+      <svg viewBox="0 0 460 236" role="img" aria-label="Schéma : le message rejoint la liste en mémoire, le budget est contrôlé, la liste part au modèle, et chaque tour est écrit dans la base SQLite, relue au lancement.">
+        <defs><marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0l8 4-8 4z" fill="context-stroke"/></marker></defs>
+        <rect class="bx" x="4" y="24" width="84" height="40" rx="4"/><text x="46" y="48" text-anchor="middle">Message</text>
+        <rect class="bx bx--me" x="118" y="14" width="112" height="60" rx="4"/><text class="hd" x="174" y="38" text-anchor="middle">Liste en mémoire</text><text class="sm" x="174" y="54" text-anchor="middle">prompt, profil, tours</text>
+        <rect class="bx bx--me" x="260" y="14" width="96" height="60" rx="4"/><text class="hd" x="308" y="38" text-anchor="middle">Budget</text><text class="sm" x="308" y="54" text-anchor="middle">≥ 90 % ? résumé</text>
+        <rect class="bx" x="386" y="24" width="70" height="40" rx="4"/><text x="421" y="42" text-anchor="middle">Modèle</text><text class="sm" x="421" y="55" text-anchor="middle">Ollama</text>
+        <path class="ar" d="M88 44h28" marker-end="url(#ah)"/><path class="ar ar--me" d="M230 44h28" marker-end="url(#ah)"/><path class="ar" d="M356 44h28" marker-end="url(#ah)"/>
+        <path class="ar" d="M421 64v36H200V76" marker-end="url(#ah)"/><text class="sm" x="310" y="114" text-anchor="middle">la réponse rejoint la liste</text>
+        <rect class="bx bx--me" x="118" y="170" width="112" height="58" rx="4"/><text class="hd" x="174" y="194" text-anchor="middle">Base SQLite</text><text class="sm" x="174" y="210" text-anchor="middle">sur le disque</text>
+        <path class="ar ar--me" d="M150 76v92" marker-end="url(#ah)"/><text class="sm" x="144" y="134" text-anchor="end">chaque tour</text><text class="sm" x="144" y="146" text-anchor="end">est écrit</text>
+        <path class="ar ar--me" d="M252 199h60V124h-124v-46" marker-end="url(#ah)" stroke-dasharray="4 3"/><text class="sm" x="318" y="166">relu au lancement,</text><text class="sm" x="318" y="178">sans les tours volatils</text>
+        <path class="ar ar--me" d="M230 199h22"/>
+      </svg>
+      <figcaption>En doré : ce que j'ai écrit. Le reste appartient à mes coéquipiers.</figcaption>
+    </figure>
+
+    <h3>Se souvenir entre deux lancements</h3>
+    <p>Après chaque tour, les deux messages sont écrits dans une petite base SQLite. Chaque conversation a son identifiant de session. Deux sessions ne se mélangent jamais. Au lancement suivant, le programme relit la session demandée avant le premier message.</p>
+    <p>La base garde aussi un profil : des paires clé et valeur, comme la langue ou le ton souhaité. Au lancement, il devient un message système placé en tête de liste.</p>
+
+    <h3>Oublier ce qui n'est vrai qu'un instant</h3>
+    <p>Un coéquipier a signalé un bug : on demandait l'heure, on relançait plus tard, et l'assistant redonnait l'ancienne heure. Il relisait sa vieille réponse comme un fait. J'ai ajouté une colonne <code>volatile</code>. Un tour qui passe par un outil ou une recherche web est marqué. Il reste dans la base pour le contrôle, mais il n'est plus relu au lancement.</p>
+
+    <h3>Faire de la place</h3>
+    <p>Le modèle a une taille de contexte limitée. Je compte les tokens à la louche : un token pour quatre caractères. Quand la liste atteint 90 % du budget, les anciens tours sont remplacés par un seul résumé. Les derniers tours (<code>keep_last</code>, 6 dans le projet) restent mot pour mot.</p>
+    <p>Dans le projet, c'est le modèle lui-même qui écrit ce résumé. Ici, il n'y a pas de modèle : la page met un texte d'exemple à la place et vous montre, dans le journal, la demande exacte que le projet aurait envoyée.</p>
+    <p>Avant le résumé, chaque ancien tour reçoit un score : 0 pour du remplissage (« ok », « merci »), 2 s'il contient un nombre ou un mot comme « décision » ou « problème », 1 sinon. Les tours à 0 sont écartés. Ce filtre a été ajouté par un coéquipier au-dessus de ma compression.</p>
+
+    <h3>Ce qui est fait, ce qui ne l'est pas</h3>
+    <p>Nous sommes quatre, chacun avec une partie. La mienne s'appelle « mémoire et persona ». La mémoire est écrite, testée et branchée dans le programme. Le persona, qui doit permettre de changer la personnalité de l'assistant en pleine conversation, n'est pas encore écrit. Ce qui existe aujourd'hui : des scénarios choisis au lancement, écrits par l'équipe. Ce sont eux que propose le menu « Scénario ».</p>
+
+    <h3>Ce qui change par rapport au Python</h3>
+    <ul class="addons">
+      <li>Pas de modèle : les réponses et le résumé sont des textes d'exemple, toujours signalés. Une seule réponse est réelle, relevée dans le banc d'essai du dépôt.</li>
+      <li>Pas de fichier SQLite : deux tableaux avec les mêmes colonnes et les mêmes requêtes. Ils sont gardés dans votre navigateur, donc recharger la page revient à relancer le programme.</li>
+      <li>Le budget de la démo est de 500 tokens pour voir la compression vite. Celui du projet est de 4096.</li>
+      <li>Dans le projet, le profil se remplit par le code. Le petit formulaire est un ajout pour la page.</li>
+      <li>La recherche dans des documents, les outils et les garde-fous de mes coéquipiers ne sont pas repris.</li>
+    </ul>
+    <p>J'ai comparé cette version au code Python sur des milliers de cas tirés au hasard, plus les cas des tests du dépôt : mêmes tailles, mêmes scores, mêmes listes, mêmes lignes en base.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Un assistant qui reprend un dossier</h3><p>Un conseiller rouvre le dossier d'un client trois jours plus tard. L'assistant retrouve l'historique et les préférences sans qu'on lui répète tout.</p></div>
+    <div><h3>De longues conversations sans casse</h3><p>Un modèle local a un contexte court. Résumer les anciens tours permet de continuer sans planter et sans perdre les chiffres et les décisions.</p></div>
+    <div><h3>Pas de réponse périmée</h3><p>Un stock, un prix ou une heure lus par un outil ne sont vrais qu'un moment. Marqués volatils, ils sont redemandés au lieu d'être récités.</p></div>
+    <div><h3>Ce que ce projet montre</h3><p>Du Python testé, une base SQLite avec migration, un bug trouvé en équipe puis corrigé, et un travail à quatre sur le même dépôt.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

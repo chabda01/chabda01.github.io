@@ -1,0 +1,8 @@
+{
+    "name": "R-Type campaign",
+    "levels": [
+        "assets/levels/level1.json",
+        "assets/levels/level2.json",
+        "assets/levels/level3.json"
+    ]
+}

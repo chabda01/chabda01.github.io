@@ -22,6 +22,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
 <link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/salle.css">
 </head>
 <body>
 <header class="hero" id="top">
@@ -39,7 +40,7 @@
       <a href="tel:+2290161124153">+229 01 61 12 41 53</a>
     </div>
     <a class="cta" href="#contact">Let's talk about an alternance <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-    <p class="hero__note">The sky behind this text is a shader your graphics card is computing right now, from the same family as the ones I wrote for the Zappy engine. The points drifting in front of it are a small network finding itself — nodes discovering their neighbours, the same idea behind every socket and protocol in this page. The moon and the constellations, over on the right, can be picked up.</p>
+    <p class="hero__note">The sky behind this text is a shader your graphics card is computing right now — the kind of tool my teammates used for Zappy's visual effects, further down this page. The points drifting in front of it are a small network finding itself — nodes discovering their neighbours, the same idea behind every socket and protocol in this page. The moon and the constellations, over on the right, can be picked up.</p>
   </div>
 </header>
 
@@ -79,11 +80,11 @@
 
 <section class="flagship" id="flagship">
   <div class="wrap">
-  <div class="panel reveal">
+  <div class="panel reveal" data-code="G-YEP-400 · zappy" data-tech="C++ · Python · OpenGL · GLSL · sockets">
   <div class="panel__head">
     <span class="label">June 2026 · end-of-second-year project</span>
     <h2>Zappy</h2>
-    <p>A networked game where teams of autonomous drones compete for resources to reach the highest elevation level. Three executables, three languages, one protocol — and the rule that changes everything: the drones have no way of communicating outside the game.</p>
+    <p>A networked game where teams of autonomous drones compete for resources to reach the highest elevation level. Three executables, three languages, one protocol — and the rule that changes everything: the drones have no way of communicating outside the game. A six-person project; I wrote the drone AI in Python and fixed a few server rules in C++.</p>
   </div>
   <svg class="scene" viewBox="0 0 600 120" preserveAspectRatio="none" aria-hidden="true">
     <polyline points="0,90 60,70 130,88 210,60 300,85 380,55 470,82 540,65 600,80" fill="none" stroke="#4a3420" stroke-width="1.5" opacity=".7"></polyline>
@@ -109,42 +110,69 @@
   </svg>
   <div class="pieces">
     <div class="piece tilt">
-      <span class="label">Server — C++</span>
+      <span class="label">Server — C++ · team</span>
       <h3>One loop, every client</h3>
-      <p>The world, the map, the players and their command queues behind a non-blocking server that holds every connection on a single event loop, with an adjustable game clock.</p>
+      <p>The world, the map, the players and their command queues behind a non-blocking server that holds every connection on a single event loop, with an adjustable game clock. Written by the team; I fixed a few rules there — food frozen during an incantation, resource densities, per-level incantation conditions.</p>
     </div>
     <div class="piece tilt">
-      <span class="label">AI — Python</span>
-      <h3>A state machine per drone</h3>
-      <p>Each drone is an autonomous process cycling between surviving, collecting and incanting. The team reproduces through the game's <code>Fork</code> command and regroups using a sound-message encoding we had to invent.</p>
+      <span class="label">AI — Python · my part</span>
+      <h3>A decision loop per drone</h3>
+      <p>Each drone picks, every turn, between surviving, collecting and incanting. Only the team's queen lays new eggs, and drones regroup using a sound-message encoding we had to invent: they elect an "anchor" to rally around, from a <code>NEED:team:level:weight</code> message.</p>
     </div>
     <div class="piece tilt">
-      <span class="label">Rendering — C++ / OpenGL</span>
+      <span class="label">Rendering — C++ / OpenGL · team</span>
       <h3>Twenty-four shaders</h3>
-      <p>Sand terrain, animated water, star field, skeletally animated characters, auras and incantation halos. Every effect has its own vertex and fragment pair, written by hand.</p>
+      <p>Sand terrain, animated water, star field, skeletally animated characters, auras and incantation halos. Every effect has its own vertex and fragment pair: this isn't my part of the project — my teammates wrote it.</p>
     </div>
   </div>
-  <p class="note">All team coordination — regrouping, knowing who is missing, triggering an incantation together — travels only through the sounds the server broadcasts. That constraint took up most of my time, and it was by far the most interesting part.</p>
+  <p class="note">All team coordination — regrouping, knowing who is missing, triggering an incantation together — travels only through the sounds the server broadcasts. That constraint took up most of my time on my part of the project, and it was by far the most interesting part.</p>
+  <a class="entry__demo" href="projets/zappy/">Try the demo (in French) →</a>
   </div>
   </div>
 </section>
 
 <div class="wrap"><hr class="rule"></div>
 
-<section class="wrap" id="work">
+<section id="work">
+  <div class="wrap">
   <div class="sec-title reveal">
-    <span class="label">The rest</span>
-    <h2>What I have built</h2>
+    <span class="label">The library</span>
+    <h2>What I've built</h2>
   </div>
-  <p class="sec-intro reveal">To the left of each project is its Epitech module code, which says which unit it comes from: <span class="mono">OOP</span> for object orientation, <span class="mono">NWP</span> for networking, <span class="mono">CCP</span> for concurrency, <span class="mono">CNA</span> for numerical computing, <span class="mono">AIA</span> for artificial intelligence.</p>
+  <p class="sec-intro reveal">Each project is a book. Step into the room, walk from shelf to shelf and open a book: the ones with a golden bookmark lead to a demo you can try in your browser (demo pages are in French for now).</p>
+  </div>
 
-  <span class="label group-label">Engines and rendering</span>
+  <div class="salle" id="salle" hidden tabindex="0" role="group" aria-label="The 3D library: each book is a project"
+       data-t-entree="Entrance" data-t-demo="open the demo" data-t-ouvrir="Try the demo" data-t-bientot="Demo in progress"
+       data-t-fiche="Read the full entry" data-t-phare="See the flagship project" data-t-fermer="Close">
+    <div class="salle__vue"><div class="salle__monde"></div></div>
+    <div class="salle__voile" aria-hidden="true"></div>
+    <div class="salle__titre"><p class="salle__aide">Drag to look around · arrow keys or WASD to walk · click a book</p></div>
+    <nav class="salle__rayons" aria-label="Shelves"></nav>
+    <aside class="salle__fiche" aria-live="polite" hidden></aside>
+  </div>
+
+  <details class="liste wrap" open>
+  <summary>See all projects as a list</summary>
+  <p class="sec-intro">To the left of each project is its Epitech module code, which says which unit it comes from: <span class="mono">OOP</span> for object orientation, <span class="mono">NWP</span> for networking, <span class="mono">CCP</span> for concurrency, <span class="mono">CNA</span> for numerical computing, <span class="mono">AIA</span> for artificial intelligence.</p>
+
+  <span class="label group-label" data-court="Rendering">Engines and rendering</span>
+  <article class="entry tilt reveal">
+    <span class="entry__code mono">G-ING-500<br>rtype</span>
+    <div class="entry__body">
+      <h3>R-Type <span class="when">Since Oct. 2026 · ongoing</span></h3>
+      <p>Our take on the 90s shoot'em up, in C++20 as a team of four, on a home-made ECS game engine designed for 4 players over the network. My part is the game logic: monsters, a multi-phase boss, charged shot, the Force, power-ups, JSON levels and Lua-scripted monsters; the demo replays it in the browser and shows the engine live.</p>
+      <p class="tech">C++20 · ECS · Lua · JSON · CMake · Catch2 tests</p>
+      <a class="entry__demo" href="projets/rtype/">Try the demo (in French) →</a>
+    </div>
+  </article>
   <article class="entry tilt reveal">
     <span class="entry__code mono">G-OOP-400<br>raytracer</span>
     <div class="entry__body">
       <h3>Raytracer</h3>
       <p>A ray tracing renderer: primitives, materials and lights described in scene files, and an architecture open to plugins so a new shape can be added without touching the core of the engine.</p>
       <p class="tech">C++ · plugins · 3D math · scene files</p>
+      <a class="entry__demo" href="../projets/raytracer/">Try the demo (in French) →</a>
       <img class="entry__shot" src="../assets/img/raytracer.png" alt="A real render from this raytracer: a green hemisphere and a red sphere on a reflective blue floor, with Phong highlights and cast shadows." loading="lazy" width="1200" height="675">
     </div>
   </article>
@@ -152,8 +180,9 @@
     <span class="entry__code mono">G-OOP-400<br>arcade</span>
     <div class="entry__body">
       <h3>Arcade</h3>
-      <p>A retro gaming platform where graphics libraries and games are loaded at runtime, behind a shared interface.</p>
-      <p class="tech">C++ · dynamic loading · SFML · ncurses</p>
+      <p>A C++ arcade cabinet whose core can neither draw nor play: it hot-loads three display libraries (ncurses, SDL2, SFML) and four games behind a shared interface negotiated with another team. I wrote Snake, Nibbler with its 32 levels, and the ncurses display; you can switch display mid-game without losing the game.</p>
+      <p class="tech">C++ · dynamic loading (dlopen) · ncurses · SDL2 · SFML · interfaces</p>
+      <a class="entry__demo" href="projets/arcade/">Try the demo (in French) →</a>
       <p class="note">The interface was not handed to us: it had to be negotiated with another group. We spent more time agreeing on the signatures than writing the code behind them.</p>
     </div>
   </article>
@@ -161,12 +190,12 @@
     <span class="entry__code mono">G-OOP-400<br>tekspice</span>
     <div class="entry__body">
       <h3>NanoTekSpice</h3>
-      <p>A logic circuit simulator: elementary components and composite circuits assembled from a description file, with state propagation and combinational loop detection.</p>
-      <p class="tech">C++ · composite · simulation</p>
+      <p>A logic circuit simulator, built by a team of two: the circuit is described in a text file (components, then links) and simulated tick by tick with three states (0, 1, undefined) from an interactive shell. I wrote the parser, the circuit with its component factory, the shell and the error handling.</p>
+      <p class="tech">C++17 · component factory · parser · three-state logic</p>
     </div>
   </article>
 
-  <span class="label group-label">Systems, networking and concurrency</span>
+  <span class="label group-label" data-court="Network">Systems, networking and concurrency</span>
   <article class="entry tilt reveal">
     <span class="entry__code mono">G-NWP-400<br>myteams</span>
     <div class="entry__body">
@@ -181,14 +210,16 @@
       <h3>myFTP</h3>
       <p>An RFC 959 compliant FTP server: authentication, passive data connections, browsing and transfer, with every client served without ever blocking the others.</p>
       <p class="tech">C · RFC 959 · TCP</p>
+      <a class="entry__demo" href="../projets/myftp/">Try the demo (in French) →</a>
     </div>
   </article>
   <article class="entry tilt reveal">
     <span class="entry__code mono">G-CCP-400<br>theplazza</span>
     <div class="entry__body">
       <h3>The Plazza</h3>
-      <p>A simulated pizzeria chain: orders are dispatched across kitchen processes, each running its own team of cooks as threads, with shared stock and inter-process communication.</p>
-      <p class="tech">C++ · threads · IPC · mutexes</p>
+      <p>A simulated pizzeria chain: the reception reads orders and dispatches them to kitchen processes, each with its own cook threads and a self-refilling ingredient stock. Processes talk through named pipes, and an idle kitchen shuts itself down. A three-person project.</p>
+      <p class="tech">C++17 · fork · POSIX threads · named pipes (mkfifo) · mutexes and condition variables · poll</p>
+      <a class="entry__demo" href="projets/plazza/">Try the demo (in French) →</a>
     </div>
   </article>
   <article class="entry tilt reveal">
@@ -200,13 +231,22 @@
     </div>
   </article>
 
-  <span class="label group-label">Numerical computing</span>
+  <span class="label group-label" data-court="Numerics">Numerical computing</span>
+  <article class="entry tilt reveal">
+    <span class="entry__code mono">G-CNA-500<br>mypgp</span>
+    <div class="entry__body">
+      <h3>my_pgp <span class="when">Sept. → Oct. 2026</span></h3>
+      <p>XOR, AES, RSA and X25519 written by a team of two with no crypto library, plus a PGP-style hybrid mode: a session key encrypted with RSA, the message with AES or XOR. My part: XOR, the full AES, byte handling and both hybrid modes.</p>
+      <p class="tech">C++17 · AES-128/192/256 · RSA · X25519 · HMAC-SHA256 · big integers</p>
+    </div>
+  </article>
   <article class="entry tilt reveal">
     <span class="entry__code mono">G-CNA-400<br>stoneanalysis</span>
     <div class="entry__body">
       <h3>Stone Analysis</h3>
       <p>Spectral analysis in pure C: reading and writing WAV files, a discrete Fourier transform then the Cooley-Tukey FFT and its inverse, with an analysis mode for dominant frequencies.</p>
       <p class="tech">C · FFT · Cooley-Tukey · WAV</p>
+      <a class="entry__demo" href="../projets/stone-analysis/">Try the demo (in French) →</a>
       <p class="note">I wrote the naive version before the fast one. Watching the computation time collapse is the moment an algorithm stops being a formula on a blackboard.</p>
     </div>
   </article>
@@ -214,12 +254,28 @@
     <span class="entry__code mono">G-CNA-400<br>interstonar</span>
     <div class="entry__body">
       <h3>Interstonar</h3>
-      <p>A space trajectory simulation: numerical integration of a multi-body gravitational field, in local and global modes, with collision detection.</p>
-      <p class="tech">C · physics · numerical integration</p>
+      <p>A program that throws a rock into space and computes its path step by step: in global mode, celestial bodies pull on it and the program reports the collision; in local mode, it flies straight towards simple shapes and the program says which one it hits. A three-person project, where I wrote the C++ structure, the scene file reader and the command-line parsing.</p>
+      <p class="tech">C++ · Newtonian gravity · Euler method · ray marching (SDF) · TOML reader</p>
     </div>
   </article>
 
-  <span class="label group-label">Artificial intelligence and data</span>
+  <span class="label group-label" data-court="AI">Artificial intelligence and data</span>
+  <article class="entry tilt reveal">
+    <span class="entry__code mono">G-AIA-500<br>sensai</span>
+    <div class="entry__body">
+      <h3>SensAI <span class="when">Since Sept. 2026 · ongoing</span></h3>
+      <p>A local AI assistant built by a team of four on Ollama, starting from a plain command-line chatbot. My part is the memory: the assistant recovers the conversation and the user profile from one run to the next, and summarises older turns when the context fills up; the persona feature is still to do.</p>
+      <p class="tech">Python · Ollama (qwen3:8b) · SQLite · token budgeting · pytest</p>
+    </div>
+  </article>
+  <article class="entry tilt reveal">
+    <span class="entry__code mono">G-CNA-501<br>mytorch</span>
+    <div class="entry__body">
+      <h3>my_torch <span class="when">Oct. → Nov. 2026</span></h3>
+      <p>A neural network library in C++17 written from scratch, by a team of two, with no machine learning library at all, and an analyzer that reads a chess board and tells whether there is check or checkmate. 97.29% accuracy on a test set kept apart from training.</p>
+      <p class="tech">C++17 · neural network · backpropagation · chess (FEN)</p>
+    </div>
+  </article>
   <article class="entry tilt reveal">
     <span class="entry__code mono">G-AIA-401<br>starttrek</span>
     <div class="entry__body">
@@ -233,6 +289,7 @@
       <h3>DR CVRIE <span class="when">February → March 2026</span></h3>
       <p>Two halves. On one side, classifying medical images to identify the type of condition. On the other, grouping 1,010 patient testimonials by pathology and urgency — without ever showing the model a single label: the resemblance is inferred from the text alone.</p>
       <p class="tech">Python · scikit-learn · NLP · clustering · pandas</p>
+      <a class="entry__demo" href="../projets/cvrie/">Try the demo (in French) →</a>
       <img class="entry__shot" src="../assets/img/cvrie.png" alt="Model comparison for the medical image classifier: SVC 83.12%, RandomForest 85.38% (best score), KNN 78.38%." loading="lazy" width="1183" height="735">
     </div>
   </article>
@@ -261,7 +318,16 @@
     </div>
   </article>
 
-  <span class="label group-label">Web and product</span>
+  <span class="label group-label" data-court="Web">Web and product</span>
+  <article class="entry tilt reveal">
+    <span class="entry__code mono">G-WEB-500<br>dashboard</span>
+    <div class="entry__body">
+      <h3>Dashboard <span class="when">Sept. → Oct. 2026</span></h3>
+      <p>Self-hosted dashboard: each user builds their page from configurable widgets (weather, GitHub, Hacker News, exchange rates, RSS feeds, Gmail), each refreshing at its own rate. Two-person project: I built the whole frontend, from the drag-and-drop grid to the form generated from the API.</p>
+      <p class="tech">TypeScript · Next.js 16 · React 19 · Tailwind CSS v4 · dnd-kit · REST API (backend by my teammate)</p>
+      <a class="entry__demo" href="projets/dashboard/">Try the demo (in French) →</a>
+    </div>
+  </article>
   <article class="entry tilt reveal">
     <span class="entry__code mono">G-SVR-500<br>survivor</span>
     <div class="entry__body">
@@ -298,6 +364,7 @@
       <p class="tech">WordPress · WooCommerce · MTN / Moov Mobile Money</p>
     </div>
   </article>
+  </details>
 </section>
 
 <div class="wrap"><hr class="rule"></div>
@@ -379,6 +446,7 @@
   <p>This page is written by hand — HTML, CSS and hand-rolled WebGL/canvas, with no libraries. September 2026.</p>
 </footer>
 <script src="../assets/shader.js" defer></script>
+<script src="../assets/salle.js" defer></script>
 <script src="../assets/network.js" defer></script>
 </body>
 </html>

@@ -1,0 +1,312 @@
+/* ═══════════════════════════════════════════════════════════
+   La bibliothèque — une salle en 3D qu'on visite
+   Tout est en CSS 3D : murs, meubles et livres sont des éléments
+   HTML placés dans l'espace. Sans bibliothèque, comme le reste.
+   ═══════════════════════════════════════════════════════════ */
+
+#work{padding-bottom:clamp(2rem,5vw,3.4rem)}
+
+.salle{
+  position:relative; overflow:hidden; isolation:isolate;
+  height:clamp(460px,84vh,780px); margin-top:.6rem;
+  background:#0B0907; color:#F0EADF;
+  touch-action:pan-y; user-select:none; -webkit-user-select:none; cursor:grab;
+  outline:none;
+}
+.salle.is-drag{cursor:grabbing}
+.salle:focus-visible{box-shadow:inset 0 0 0 2px #E9A855}
+.salle[hidden]{display:none}
+@supports (height:1svh){ .salle{height:clamp(460px,84svh,780px)} }
+
+.salle__vue{position:absolute; inset:0; overflow:hidden; perspective:760px}
+.salle__monde,.salle__monde *{transform-style:preserve-3d}
+.salle__monde{position:absolute; left:50%; top:50%; width:0; height:0; will-change:transform}
+
+/* un plan posé dans l'espace : le script fixe sa taille et sa position */
+.plan{position:absolute; left:0; top:0; transform-origin:0 0}
+
+/* ─────────────  murs, sol, plafond  ───────────── */
+.mur{display:flex; align-items:flex-end}
+/* les grands aplats (murs, sol, plafond) sont dessinés à demi-taille puis agrandis :
+   quatre fois moins de mémoire graphique, sans différence visible sur du bois sombre */
+.mur__fond{
+  position:absolute; left:0; top:0; width:50%; height:50%; transform-origin:0 0; transform:translateZ(-1px) scale(2);
+  background:
+    linear-gradient(180deg,rgba(0,0,0,.5),transparent 22%,transparent 78%,rgba(0,0,0,.45)),
+    repeating-linear-gradient(90deg,transparent 0 79px,rgba(0,0,0,.28) 79px 80px),
+    linear-gradient(180deg,#2A2118,#241C14 60%,#1B150F);
+}
+.mur--fond{justify-content:center}
+.mur--entree{
+  background:
+    radial-gradient(60% 90% at 50% 100%,rgba(233,168,85,.16),transparent 70%),
+    linear-gradient(180deg,#1D1710,#15110C);
+}
+.sol{
+  background:
+    linear-gradient(180deg,rgba(6,5,4,.82),rgba(6,5,4,.25) 45%,transparent 75%),
+    repeating-linear-gradient(90deg,#3A2A1B 0 36.5px,#2F2216 36.5px 37.5px,#42301F 37.5px 74.5px,#2F2216 74.5px 75.5px);
+}
+.sol__tapis{
+  position:absolute; left:50%; top:0; bottom:0; width:135px; margin-left:-67.5px;
+  background:
+    linear-gradient(180deg,rgba(6,5,4,.8),transparent 60%),
+    linear-gradient(90deg,#C99245 0 2px,transparent 2px 7px,#C99245 7px 8px,transparent 8px calc(100% - 8px),#C99245 calc(100% - 8px) calc(100% - 7px),transparent calc(100% - 7px) calc(100% - 2px),#C99245 calc(100% - 2px)),
+    #5A2018;
+}
+.plafond{
+  background:
+    repeating-linear-gradient(180deg,transparent 0 125px,#0E0B08 125px 138px),
+    linear-gradient(180deg,#0A0806,#1C160F);
+}
+.lampe{
+  position:absolute; width:170px; height:170px; margin:-85px 0 0 -85px; border-radius:50%;
+  background:radial-gradient(circle,rgba(255,214,150,.95) 0 5%,rgba(233,168,85,.42) 12%,rgba(233,168,85,.1) 38%,transparent 62%);
+}
+
+/* ─────────────  un rayon : la plaque et son meuble  ───────────── */
+.rayon{
+  position:relative; flex:none; display:flex; flex-direction:column; justify-content:flex-end; align-items:center;
+}
+.rayon__plaque{
+  margin-bottom:-11px; padding:12px 40px 14px; border-radius:4px;
+  font-family:"Instrument Sans",system-ui,sans-serif; font-size:23px; font-weight:600;
+  letter-spacing:.2em; text-transform:uppercase; white-space:nowrap; color:#2A1C08;
+  background:linear-gradient(180deg,#F0C987,#C08B3C 55%,#A8762C);
+  box-shadow:0 0 0 2px #6E4A14;
+  transform-origin:50% 100%; transform:translateY(-27px) translateZ(50px) scale(.5);
+}
+.meuble{position:relative; width:100%; padding:0 12px}
+.meuble__fond{position:absolute; inset:0; background:linear-gradient(180deg,#17110B,#120D08); transform:translateZ(1px)}
+.meuble__cote{
+  position:absolute; top:0; bottom:0; width:43px;
+  background:linear-gradient(90deg,#3B2A19,#553B22);
+}
+.meuble__cote--g{left:0; transform-origin:0 50%; transform:translateZ(3px) rotateY(-90deg)}
+.meuble__cote--d{right:0; transform-origin:100% 50%; transform:translateZ(3px) rotateY(90deg)}
+.meuble__bord{
+  position:absolute; top:-10px; bottom:0; width:12px; transform:translateZ(46px);
+  background:linear-gradient(90deg,#6B4A2B,#4A331E);
+}
+.meuble__bord--g{left:0}
+.meuble__bord--d{right:0}
+.meuble__toit{
+  position:absolute; left:0; right:0; top:-10px; height:10px; transform:translateZ(46px);
+  background:linear-gradient(180deg,#7A5633,#5B3F24);
+}
+.meuble__toit::before{
+  content:""; position:absolute; left:0; right:0; top:0; height:43px;
+  transform-origin:50% 0; transform:rotateX(-90deg); background:#3B2A19;
+}
+.meuble__plinthe{
+  position:relative; height:26px; margin:0 -12px; transform:translateZ(46px);
+  background:linear-gradient(180deg,#5B3F24,#3B2A19);
+}
+
+.tablette{
+  position:relative; height:158px; padding:0 4px 9px;
+  display:flex; align-items:flex-end; gap:10px;
+}
+.tablette__planche{
+  position:absolute; left:-10px; right:-10px; bottom:7px; height:41px;
+  transform-origin:50% 100%; transform:translateZ(3px) rotateX(-90deg);
+  background:linear-gradient(180deg,#6B4A2B,#3F2C1A);
+}
+.tablette__chant{
+  position:absolute; left:-12px; right:-12px; bottom:0; height:8px; transform:translateZ(46px);
+  background:linear-gradient(180deg,#8A6238,#5B3F24);
+}
+.cale{flex:1 1 0; min-width:0; display:flex; align-items:flex-end; justify-content:center; gap:3px}
+
+/* paquets de livres rangés sur la tranche : le décor */
+.paquet{position:relative; flex:none}
+.paquet__face{position:absolute; inset:0; transform:translateZ(34px)}
+.paquet__haut{
+  position:absolute; left:0; right:0; top:0; height:30px;
+  transform-origin:50% 0; transform:translateZ(4px) rotateX(90deg); background:#B9AC92;
+}
+.paquet__cote{position:absolute; top:0; bottom:0; width:30px; background:#241A11}
+.paquet__cote--g{left:0; transform-origin:0 50%; transform:translateZ(4px) rotateY(-90deg)}
+.paquet__cote--d{right:0; transform-origin:100% 50%; transform:translateZ(4px) rotateY(90deg)}
+
+/* ─────────────  un livre = un projet  ───────────── */
+.livre{
+  --c1:#7A3B1D; --c2:#4E2410;
+  position:relative; flex:none; display:block; width:96px; height:134px;
+  padding:0; border:0; background:none; color:#F3E8D2; font:inherit; text-align:left; text-decoration:none;
+  cursor:pointer; transform:translateZ(10px);
+  transition:transform .35s cubic-bezier(.2,.8,.2,1);
+}
+.livre:hover,.livre:focus-visible,.livre.is-choisi{transform:translateZ(46px) rotateX(3deg)}
+.livre:focus-visible{outline:none}
+.livre:focus-visible .livre__couv,.livre.is-choisi .livre__couv{box-shadow:0 0 0 4px #F4D9A6, 0 0 52px rgba(233,168,85,.55)}
+/* la couverture est dessinée deux fois plus grande puis réduite de moitié :
+   son image garde assez de détail quand on s'approche */
+.livre__couv{
+  position:absolute; left:0; top:0; width:200%; height:200%; padding:26px 20px 18px 30px; border-radius:2px 6px 6px 2px;
+  transform-origin:0 0; transform:translateZ(22px) scale(.5); display:flex; flex-direction:column; overflow:hidden;
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.4) 0 6px,rgba(255,255,255,.1) 6px 10px,rgba(0,0,0,.18) 10px 16px,transparent 16px),
+    radial-gradient(120% 90% at 30% 0%,rgba(255,255,255,.14),transparent 60%),
+    linear-gradient(160deg,var(--c1),var(--c2));
+  transition:box-shadow .3s;
+}
+.livre__couv::before{
+  content:""; position:absolute; inset:12px 10px 12px 24px; pointer-events:none;
+  border:2px solid rgba(240,201,135,.55); border-radius:2px;
+}
+.livre__titre{
+  font-family:"Instrument Serif",Georgia,serif; font-size:33px; line-height:1.04; letter-spacing:-.01em;
+  overflow-wrap:break-word;
+}
+.livre__code{
+  margin-top:auto; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:13.2px;
+  letter-spacing:.08em; text-transform:uppercase; color:rgba(243,232,210,.72);
+}
+.livre__signet{
+  position:absolute; right:22px; top:0; width:26px; height:76px;
+  background:linear-gradient(180deg,#F4D9A6,#E9A855);
+  clip-path:polygon(0 0,100% 0,100% 100%,50% 80%,0 100%);
+}
+.livre__dos,.livre__pages,.livre__dessus{position:absolute}
+.livre__dos{
+  left:0; top:0; bottom:0; width:22px; transform-origin:0 50%; transform:rotateY(-90deg);
+  background:linear-gradient(90deg,var(--c2),var(--c1));
+}
+.livre__pages{
+  right:0; top:2px; bottom:2px; width:22px; transform-origin:100% 50%; transform:rotateY(90deg);
+  background:repeating-linear-gradient(90deg,#E6DCC6 0 1px,#CFC3A8 1px 2px);
+}
+.livre__dessus{
+  left:1px; right:2px; top:0; height:22px; transform-origin:50% 0; transform:rotateX(90deg);
+  background:repeating-linear-gradient(180deg,#E6DCC6 0 1px,#CFC3A8 1px 2px);
+}
+.livre.livre--phare{--c1:#E2AD5C; --c2:#A8721F; color:#2A1C08}
+.livre--phare .livre__couv::before{border-color:rgba(42,28,8,.5)}
+.livre--phare .livre__code{color:rgba(42,28,8,.75)}
+.livre--phare .livre__titre{font-size:42px}
+
+.r0{--c1:#8A4423; --c2:#532411}
+.r1{--c1:#24505F; --c2:#122C36}
+.r2{--c1:#4A4682; --c2:#27244C}
+.r3{--c1:#35603F; --c2:#1A3421}
+.r4{--c1:#7C3147; --c2:#431726}
+
+/* la fenêtre du fond : la lune de la page d'accueil */
+.oculus{
+  position:absolute; left:50%; top:26px; width:132px; height:132px; margin-left:-66px; border-radius:50%; transform:translateZ(2px);
+  background:
+    radial-gradient(circle at 62% 40%,#E9DFC5 0 12%,#CDBF9D 13% 15%,transparent 16%),
+    radial-gradient(1.5px 1.5px at 22% 30%,#F4EFE6 50%,transparent 51%),
+    radial-gradient(1.5px 1.5px at 34% 68%,#F4EFE6 50%,transparent 51%),
+    radial-gradient(1px 1px at 78% 72%,#F4EFE6 50%,transparent 51%),
+    radial-gradient(1px 1px at 48% 20%,#F4EFE6 50%,transparent 51%),
+    radial-gradient(circle at 60% 40%,#2B3350,#141A2E 70%);
+  box-shadow:0 0 0 7px #5B3F24, 0 0 0 9px #2A1C0F, 0 0 70px 10px rgba(180,190,230,.2);
+}
+
+/* ─────────────  l'habillage par-dessus la 3D  ───────────── */
+.salle__voile{
+  position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(120% 95% at 50% 45%,transparent 55%,rgba(5,4,3,.72));
+}
+.salle__titre{position:absolute; left:1.4rem; top:1.2rem; max-width:21rem; pointer-events:none}
+.salle__titre .label{color:#DFAC66; display:block; margin-bottom:.3rem}
+.salle__aide{font-size:.8rem; line-height:1.5; color:#B9AF9D}
+
+.salle__rayons{
+  position:absolute; left:50%; bottom:1.1rem; transform:translateX(-50%);
+  display:flex; gap:.3rem; padding:.3rem; border-radius:999px; max-width:calc(100% - 1.6rem);
+  background:rgba(15,12,9,.92); box-shadow:0 0 0 1px rgba(240,234,224,.13), 0 12px 30px -12px #000;
+  overflow-x:auto; scrollbar-width:none; cursor:default;
+}
+.salle__rayons::-webkit-scrollbar{display:none}
+.salle__rayons button{
+  font:inherit; font-size:.8rem; font-weight:600; white-space:nowrap; cursor:pointer;
+  padding:.5rem .95rem; border:0; border-radius:999px; background:transparent; color:#B9AF9D;
+  transition:color .2s,background .2s;
+}
+.salle__rayons button:hover{color:#F4D9A6}
+.salle__rayons button[aria-pressed="true"]{background:#E9A855; color:#1A1611}
+.salle__rayons button:focus-visible{outline:2px solid #F4D9A6; outline-offset:1px}
+
+.salle__fiche{
+  position:absolute; right:1.2rem; top:1.2rem; width:min(340px,calc(100% - 2.4rem));
+  padding:1.2rem 1.3rem 1.3rem; border-radius:5px; cursor:default; user-select:text; -webkit-user-select:text;
+  background:rgba(20,16,12,.96); box-shadow:0 0 0 1px rgba(240,234,224,.14), 0 24px 50px -20px #000;
+  animation:ficheIn .28s ease both;
+}
+.salle__fiche[hidden]{display:none}
+@keyframes ficheIn{from{opacity:0; transform:translateY(8px)}}
+.salle__fiche .mono{color:#C08B3C; display:block; margin-bottom:.45rem}
+.salle__fiche h3{font-family:"Instrument Serif",Georgia,serif; font-weight:400; font-size:1.7rem; line-height:1.05; color:#F7F2E8}
+.salle__fiche .quand{display:block; margin-top:.3rem; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#8D8477}
+.salle__fiche p{margin-top:.7rem; font-size:.88rem; line-height:1.55; color:#C6BCAB}
+.salle__fiche .tech{margin-top:.6rem; font-size:.74rem; color:#8D8477}
+.fiche__actions{display:flex; flex-wrap:wrap; align-items:center; gap:.6rem 1rem; margin-top:1rem}
+.fiche__go{
+  display:inline-flex; align-items:center; gap:.45rem; text-decoration:none; cursor:pointer;
+  font:inherit; font-size:.85rem; font-weight:600; padding:.55rem 1.05rem; border-radius:999px;
+  background:#E9A855; color:#1A1611; border:1px solid #E9A855; transition:filter .2s,transform .2s;
+}
+.fiche__go:hover{filter:brightness(1.08); transform:translateY(-1px)}
+.fiche__lien{
+  font:inherit; font-size:.8rem; color:#B9AF9D; background:none; border:0; padding:0 0 2px; cursor:pointer;
+  border-bottom:1px solid rgba(240,234,224,.25); text-decoration:none;
+}
+.fiche__lien:hover{color:#F4D9A6; border-bottom-color:#E9A855}
+.fiche__bientot{font-size:.78rem; color:#8D8477; font-style:italic}
+.fiche__fermer{
+  position:absolute; right:.5rem; top:.4rem; width:2rem; height:2rem; border:0; background:none;
+  color:#8D8477; font-size:1.2rem; line-height:1; cursor:pointer; border-radius:50%;
+}
+.fiche__fermer:hover{color:#F4D9A6}
+.fiche__go:focus-visible,.fiche__lien:focus-visible,.fiche__fermer:focus-visible{outline:2px solid #F4D9A6; outline-offset:2px}
+
+@media (max-width:760px){
+  .salle{height:clamp(480px,80vh,640px)}
+  @supports (height:1svh){ .salle{height:clamp(480px,80svh,640px)} }
+  .salle__titre{left:1rem; top:.9rem; max-width:none; right:1rem}
+  .salle__rayons{bottom:.8rem; left:.6rem; right:.6rem; transform:none; max-width:none; justify-content:space-between; gap:0}
+  .salle__rayons button{padding:.5rem .62rem; font-size:.76rem}
+  .salle__fiche{right:.8rem; left:.8rem; top:auto; bottom:4.2rem; width:auto; padding:1rem 1.1rem 1.1rem}
+  .salle__fiche h3{font-size:1.4rem}
+  .salle__fiche p{font-size:.84rem}
+  .salle__fiche .tech{display:none}
+}
+
+/* ─────────────  la liste complète, repliée sous la salle  ───────────── */
+.liste{margin-top:1.6rem}
+.liste > summary{
+  cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:.6rem;
+  font-size:.9rem; font-weight:600; color:var(--ink-2); padding:.6rem 0;
+  transition:color .2s;
+}
+.liste > summary::-webkit-details-marker{display:none}
+.liste > summary::before{content:"+"; font-family:"JetBrains Mono",monospace; color:var(--accent); width:1ch}
+.liste[open] > summary::before{content:"–"}
+.liste > summary:hover{color:var(--accent)}
+.liste > summary:focus-visible{outline:2px solid var(--accent); outline-offset:4px; border-radius:2px}
+.liste[open] > summary{margin-bottom:1.6rem}
+.liste:not(.est-repliable) > summary{display:none}
+.entry__demo{
+  display:inline-flex; align-items:center; gap:.4rem; margin-top:.9rem; text-decoration:none;
+  font-size:.86rem; font-weight:600; color:var(--accent);
+  padding-bottom:2px; border-bottom:1px solid currentColor;
+}
+.entry__demo:hover{filter:brightness(1.15)}
+.entry.is-cible{background:var(--wash); box-shadow:inset 2px 0 0 var(--accent)}
+
+@media (prefers-reduced-motion:reduce){
+  .livre,.salle__fiche{transition:none; animation:none}
+}
+.liste .entry{scroll-margin-top:76px}
+
+/* ─────────────  qualité adaptative (voir salle.js)  ───────────── */
+/* niveau 1 : on retire ce qui ne se voit que de biais ou qui n'est qu'ambiance */
+.salle.is-leger .paquet__haut,.salle.is-leger .paquet__cote,
+.salle.is-leger .lampe,.salle.is-leger .salle__voile{display:none}
+/* niveau 2 : il ne reste que les murs, les meubles et les livres */
+.salle.is-mini .paquet,.salle.is-mini .plafond,.salle.is-mini .tablette__planche,
+.salle.is-mini .livre__pages,.salle.is-mini .livre__dessus,.salle.is-mini .meuble__toit::before{display:none}
+.salle.is-mini .livre{transition:none}

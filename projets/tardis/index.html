@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tardis — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Reconstitution pédagogique, sur données fictives : nettoyage d'un jeu de trajets ferroviaires, visualisations, et un modèle de prédiction des retards entraîné en direct dans le navigateur.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage{color-scheme:dark}
+
+.notice{
+  display:flex; gap:.7rem; align-items:flex-start; max-width:62ch; margin-top:1.3rem;
+  padding:.85rem 1rem; border-radius:6px; background:var(--wash);
+  box-shadow:inset 2px 0 0 var(--bad,#E0775F);
+  font-size:.92rem; line-height:1.55; color:var(--ink-2);
+}
+.notice svg{flex:none; width:19px; height:19px; margin-top:.15rem; color:var(--bad,#E0775F)}
+.notice b{color:var(--ink); font-weight:600}
+.notice--stage{background:rgba(224,119,95,.08); box-shadow:inset 2px 0 0 var(--bad); color:var(--stage-ink-2); margin:0 0 1.2rem}
+.notice--stage b{color:var(--stage-ink)}
+
+.tabs{display:flex; flex-wrap:wrap; gap:.4rem; margin-bottom:1rem}
+.pane[hidden]{display:none}
+.pane > p{margin-bottom:.9rem; max-width:62ch}
+
+.fig__plot{position:relative; height:260px; background:#0F0D0A; border-radius:4px; box-shadow:inset 0 0 0 1px var(--stage-line)}
+.fig__plot canvas{width:100%; height:100%; display:block}
+.fig__cap{font-size:.78rem; color:var(--stage-ink-3); margin-top:.5rem; max-width:60ch}
+.loss{position:relative; height:120px; background:#0F0D0A; border-radius:4px; box-shadow:inset 0 0 0 1px var(--stage-line); margin:.9rem 0}
+.loss canvas{width:100%; height:100%; display:block}
+
+.rule-card{padding:.85rem 0; box-shadow:inset 0 1px 0 var(--stage-line)}
+.rule-card:first-child{padding-top:0; box-shadow:none}
+.rule-card__head{display:flex; flex-wrap:wrap; align-items:baseline; gap:.5rem .8rem; margin-bottom:.3rem}
+.rule-card__head h3{margin-right:auto}
+.rule-count{font-family:"Instrument Serif",Georgia,serif; font-size:1.3rem; color:var(--gold)}
+.rule-card p{margin:0 0 .6rem; max-width:64ch}
+.rule-ex{display:flex; flex-wrap:wrap; gap:.4rem}
+.rule-ex code{
+  font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.74rem; color:var(--stage-ink-2);
+  background:#0F0D0A; border-radius:3px; padding:.28rem .5rem; box-shadow:inset 0 0 0 1px var(--stage-line);
+}
+.rule-ex code b{color:var(--stage-ink); font-weight:600}
+.rule-ex .arrow{color:var(--stage-ink-3)}
+
+.row{display:flex; flex-wrap:wrap; align-items:flex-end; gap:.7rem; margin-bottom:.9rem}
+.row .field{flex:1 1 150px; min-width:0}
+.verdict{margin-top:.8rem; padding:.7rem .9rem; border-radius:4px; font-size:.88rem; color:var(--stage-ink);
+  background:rgba(233,168,85,.08); box-shadow:inset 2px 0 0 var(--gold)}
+.verdict:empty{display:none}
+.verdict b{font-family:"Instrument Serif",Georgia,serif; font-weight:400; font-size:1.5rem; margin:0 .15rem}
+.verdict small{display:block; color:var(--stage-ink-3); font-size:.74rem; margin-top:.3rem}
+
+.side-note{font-size:.78rem; color:var(--stage-ink-3); line-height:1.5}
+.tagsynth{display:inline-block; font-size:.64rem; letter-spacing:.08em; text-transform:uppercase;
+  padding:.08rem .45rem; border-radius:3px; color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold); margin-bottom:.6rem}
+
+.schema{margin:1.1rem 0; padding:1rem 1.1rem; border-radius:6px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--rule)}
+.schema svg{display:block; width:100%; height:auto; max-width:520px}
+.schema figcaption{font-size:.84rem; color:var(--ink-3); margin-top:.6rem}
+.schema text{font-family:"Instrument Sans",system-ui,sans-serif; fill:var(--ink-2); font-size:11px}
+.schema .ti{font-weight:600; fill:var(--ink)}
+.schema rect{fill:var(--wash); stroke:var(--accent-quiet); stroke-width:1}
+.schema line,.schema path{stroke:var(--accent-quiet); stroke-width:1.4; fill:none; marker-end:url(#tdArrow)}
+.how h3{font-size:1rem; margin:1.3rem 0 .4rem}
+.how code{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.82em; color:var(--ink)}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">Tardis</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Intelligence artificielle et données</span>
+  <h1>Tardis</h1>
+  <p class="demo-hero__lede">Une analyse de données de circulation ferroviaire et un modèle de prédiction des retards : du nettoyage du jeu de données jusqu'aux visualisations.</p>
+  <p class="notice">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3L2 20h20L12 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 9.5v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1" fill="currentColor"/></svg>
+    <span><b>Le code original de ce projet n'a pas été retrouvé.</b> Cette page est une reconstitution pédagogique de la méthode décrite dans mon portfolio, sur un jeu de données fictif — pas le vrai projet.</span>
+  </p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage">
+    <div class="stage__main">
+      <p class="notice notice--stage">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3L2 20h20L12 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 9.5v5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1" fill="currentColor"/></svg>
+        <span>Démo rejouée : <b>tout ce qui suit est fictif</b> — des trajets générés par votre navigateur, pas des données SNCF réelles.</span>
+      </p>
+      <div class="tabs" role="tablist" aria-label="Étapes de l'analyse">
+        <button class="chip is-on" type="button" data-pane="donnees" aria-pressed="true">1 · Données brutes</button>
+        <button class="chip" type="button" data-pane="nettoyage" aria-pressed="false">2 · Nettoyage</button>
+        <button class="chip" type="button" data-pane="viz" aria-pressed="false">3 · Visualisations</button>
+        <button class="chip" type="button" data-pane="modele" aria-pressed="false">4 · Modèle</button>
+      </div>
+
+      <div class="pane" id="td-pane-donnees">
+        <p>Aperçu des premiers trajets fictifs, tels que générés — avant tout nettoyage. Les champs manquants (<code>—</code>) et les valeurs hors norme sont visibles en l'état.</p>
+        <div style="overflow:auto">
+          <table class="dtable">
+            <thead><tr><th>ID</th><th>Ligne</th><th>Date</th><th>Heure</th><th>Retard</th></tr></thead>
+            <tbody id="td-sample-body"></tbody>
+          </table>
+        </div>
+        <p class="fig__cap" id="td-sample-cap"></p>
+      </div>
+
+      <div class="pane" id="td-pane-nettoyage" hidden>
+        <p>Quatre règles, appliquées dans cet ordre, sur le jeu brut ci-dessus.</p>
+        <div id="td-rules"></div>
+      </div>
+
+      <div class="pane" id="td-pane-viz" hidden>
+        <div class="chips" id="td-viz-chips" role="tablist" aria-label="Graphique">
+          <button class="chip is-on" type="button" data-chart="hist" aria-pressed="true">Distribution des retards</button>
+          <button class="chip" type="button" data-chart="ligne" aria-pressed="false">Retard moyen par ligne</button>
+          <button class="chip" type="button" data-chart="heure" aria-pressed="false">Retard moyen par heure</button>
+        </div>
+        <div class="fig__plot" style="margin-top:.9rem"><canvas id="td-chart"></canvas></div>
+        <p class="fig__cap" id="td-chart-cap"></p>
+      </div>
+
+      <div class="pane" id="td-pane-modele" hidden>
+        <p>Régression linéaire à plusieurs variables (heure, heures de pointe, jour ouvré, ligne), entraînée par descente de gradient — dans votre navigateur, sur le jeu de données fictif nettoyé.</p>
+        <div class="stage__bar" style="margin:0 0 .3rem">
+          <button class="btn" type="button" id="td-train">Entraîner le modèle</button>
+          <span class="stage__status" role="status" id="td-train-status">Pas encore entraîné</span>
+        </div>
+        <div class="loss"><canvas id="td-loss"></canvas></div>
+        <div class="stats" id="td-metrics" hidden>
+          <div class="stat"><b id="td-m-mae">—</b><span>erreur moyenne (min)</span></div>
+          <div class="stat"><b id="td-m-rmse">—</b><span>erreur quadratique (min)</span></div>
+          <div class="stat"><b id="td-m-r2">—</b><span>R² (variance expliquée)</span></div>
+          <div class="stat"><b id="td-m-test">—</b><span>trajets de test, jamais entraînés</span></div>
+        </div>
+        <p class="fig__cap" id="td-metrics-cap"></p>
+
+        <h3 style="margin:1.3rem 0 .6rem">Tester une prédiction</h3>
+        <div class="row">
+          <label class="field">Ligne
+            <select id="td-pred-ligne"></select>
+          </label>
+          <label class="field">Heure de départ
+            <select id="td-pred-heure"></select>
+          </label>
+          <label class="field">Jour
+            <span class="chips">
+              <button class="chip is-on" type="button" id="td-pred-ouvre" aria-pressed="true">Jour ouvré</button>
+              <button class="chip" type="button" id="td-pred-weekend" aria-pressed="false">Week-end</button>
+            </span>
+          </label>
+          <button class="btn btn--ghost" type="button" id="td-pred-go">Prédire</button>
+        </div>
+        <div class="verdict" id="td-pred-result"></div>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <span class="label">Réglages</span>
+      <label class="field">Nombre de trajets générés : <span id="td-n-val">1 500</span>
+        <input type="range" id="td-n" min="400" max="4000" step="100" value="1500">
+      </label>
+      <button class="btn btn--ghost" type="button" id="td-reseed">Nouveau jeu de données</button>
+      <div class="stats" id="td-stats">
+        <div class="stat"><b id="td-s-raw">—</b><span>trajets bruts</span></div>
+        <div class="stat"><b id="td-s-dup">—</b><span>doublons</span></div>
+        <div class="stat"><b id="td-s-miss">—</b><span>manquants complétés</span></div>
+        <div class="stat"><b id="td-s-out">—</b><span>aberrants retirés</span></div>
+        <div class="stat"><b id="td-s-clean">—</b><span>trajets propres</span></div>
+      </div>
+      <p class="side-note">Toutes les données de cette page sont générées par votre navigateur, à partir d'une graine aléatoire. Aucun appel réseau, aucune vraie donnée SNCF.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Choisissez un volume.</b> Déplacez le curseur « Nombre de trajets générés » ou cliquez sur « Nouveau jeu de données » : un nouveau jeu fictif est créé dans l'onglet 1.</span></li>
+      <li><span><b>Ouvrez l'onglet « Nettoyage ».</b> Les 4 règles s'appliquent devant vous, avec des exemples concrets et le nombre de lignes corrigées par chacune.</span></li>
+      <li><span><b>Ouvrez l'onglet « Visualisations ».</b> Changez de graphique : distribution des retards, puis par ligne, puis par heure.</span></li>
+      <li><span><b>Ouvrez l'onglet « Modèle » et cliquez sur « Entraîner le modèle ».</b> La courbe de perte baisse en direct ; le MAE, le RMSE et le R² s'affichent ensuite, mesurés sur des trajets jamais vus pendant l'entraînement.</span></li>
+      <li><span><b>Choisissez une ligne, une heure et un type de jour,</b> puis cliquez sur « Prédire » pour voir le retard estimé par le modèle.</span></li>
+    </ol>
+  </div>
+  <div class="how">
+    <h2>Comment ça marche</h2>
+    <p><b>Le code original de ce projet n'a pas été retrouvé.</b> Je ne pouvais pas rejouer l'analyse réelle, alors j'ai reconstruit la méthode décrite dans ma fiche de portfolio — nettoyage, visualisation, modèle de retard — sur un jeu de données fictif que j'ai écrit pour cette page, avec le même genre de défauts qu'un vrai export de données.</p>
+    <h3>1. Un jeu de données fictif</h3>
+    <p>Chaque ligne simule un trajet : une ligne (5 lignes fictives), une date, une heure de départ, un retard en minutes. Le retard suit une tendance volontaire (plus élevé aux heures de pointe, un peu plus en semaine, certaines lignes plus chargées) plus du bruit aléatoire — puis j'abîme une partie des lignes : valeurs manquantes, doublons, valeurs aberrantes.</p>
+    <h3>2. Le nettoyage, règle par règle</h3>
+    <p>Quatre règles simples, dans cet ordre : lignes avec un champ essentiel manquant → supprimées ; doublons exacts (même ligne, même date, même heure) → gardé le premier ; retard hors de <code>[-15, 180]</code> minutes → retiré (valeur aberrante) ; retard manquant → complété par la médiane des trajets propres de la même ligne.</p>
+    <h3>3. Les visualisations</h3>
+    <p>Trois lectures du jeu nettoyé : la distribution des retards (histogramme), le retard moyen par ligne, et le retard moyen par heure de la journée — pour repérer les heures de pointe.</p>
+    <h3>4. Le modèle</h3>
+    <p>Une régression linéaire : le retard prédit est une somme pondérée de l'heure (centrée-réduite), de deux indicateurs « proche de 8h » et « proche de 18h », du type de jour, et de la ligne. Les poids sont appris par descente de gradient, directement dans le navigateur. 80&nbsp;% des trajets servent à l'entraînement, 20&nbsp;% sont mis de côté et ne servent qu'à mesurer l'erreur à la fin (MAE, RMSE, R²) — ce sont ces 20&nbsp;% qui donnent les chiffres affichés, jamais les trajets d'entraînement.</p>
+    <figure class="schema">
+      <svg viewBox="0 0 560 120" role="img" aria-label="Schéma du pipeline : données brutes fictives, puis nettoyage, puis visualisations et modèle entraîné sur les données propres.">
+        <defs><marker id="tdArrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" fill="var(--accent-quiet)"/></marker></defs>
+        <rect x="6" y="38" width="118" height="44" rx="5"/>
+        <text class="ti" x="65" y="56" text-anchor="middle">Données</text>
+        <text x="65" y="70" text-anchor="middle">brutes (fictives)</text>
+        <path d="M128 60H168"/>
+        <rect x="172" y="38" width="118" height="44" rx="5"/>
+        <text class="ti" x="231" y="56" text-anchor="middle">Nettoyage</text>
+        <text x="231" y="70" text-anchor="middle">4 règles</text>
+        <path d="M294 60H334"/>
+        <rect x="338" y="4" width="110" height="44" rx="5"/>
+        <text class="ti" x="393" y="22" text-anchor="middle">Visualisations</text>
+        <text x="393" y="36" text-anchor="middle">histogramme, moyennes</text>
+        <path d="M290 50 Q 318 26 334 26"/>
+        <rect x="338" y="72" width="110" height="44" rx="5"/>
+        <text class="ti" x="393" y="90" text-anchor="middle">Modèle</text>
+        <text x="393" y="104" text-anchor="middle">régression, en direct</text>
+        <path d="M290 70 Q 318 94 334 94"/>
+      </svg>
+      <figcaption>Le pipeline de la démo : données fictives → nettoyage → visualisations et modèle, entraîné dans votre navigateur.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Prioriser la maintenance</h3><p>Repérer les lignes et les heures les plus sujettes aux retards pour cibler la maintenance ou renforcer le personnel, plutôt que de réagir après coup.</p></div>
+    <div><h3>Fiabiliser un export de données</h3><p>Un export terrain contient presque toujours des doublons, des capteurs en panne et des champs vides. Les mêmes règles de nettoyage — explicites, mesurées — s'appliquent à n'importe quel jeu de données d'exploitation.</p></div>
+    <div><h3>Donner une estimation honnête</h3><p>Afficher un retard estimé à un usager ou un opérateur, avec une marge d'erreur mesurée sur des données jamais vues — plutôt qu'un chiffre présenté comme certain.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur, sur un jeu de données fictif.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

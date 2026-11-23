@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>my_pgp — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Un atelier de chiffrement dans le navigateur : XOR, AES, RSA, X25519 et un mode hybride façon PGP, avec les mêmes commandes que le programme C++ et le détail de chaque calcul.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage.pg{grid-template-columns:minmax(0,1fr) minmax(0,320px)}
+@media (max-width:980px){
+  .stage.pg{grid-template-columns:minmax(0,1fr)}
+  .stage.pg .stage__side{box-shadow:inset 0 1px 0 var(--stage-line)}
+}
+.pg [hidden]{display:none !important}
+.pg-pick{display:flex; flex-direction:column; gap:.7rem; margin-bottom:1.1rem}
+.pg-pick__row{display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .5rem}
+.pg-pick__row > span{font-size:.72rem; color:var(--stage-ink-3); letter-spacing:.04em; min-width:5.2rem}
+.pg-pick .chip{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.74rem}
+.pg-pick .chip:disabled{opacity:.4; cursor:not-allowed}
+.pg-fields{display:grid; gap:.8rem; margin-bottom:.8rem}
+.pg-fields textarea{word-break:break-all}
+.pg-tools{display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-bottom:1rem}
+.pg-tools .btn{font-size:.78rem; padding:.4rem .8rem}
+.pg-sel{
+  font:inherit; font-size:.78rem; color:var(--stage-ink); background:#0F0D0A;
+  border:1px solid var(--stage-line); border-radius:999px; padding:.38rem .7rem; max-width:100%;
+}
+.pg-sel:focus-visible,.chip:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.pg-term{min-height:5.6rem; max-height:17rem}
+.pg-run{margin:1rem 0 0}
+.pg-run .stage__status{margin-left:0; flex-basis:100%}
+.pg-stats{margin-top:1.1rem}
+.pg-stats .stat b{font-size:1.35rem}
+.pg-steps{margin-top:1.5rem; padding-top:1.3rem; box-shadow:inset 0 1px 0 var(--stage-line)}
+.pg-steps > .label{display:block; margin-bottom:.8rem}
+.pg-h{font-size:1rem !important; margin:0 0 .5rem}
+.pg-p{font-size:.84rem !important; margin:.5rem 0 .8rem; max-width:68ch}
+.pg-warn{color:#E9B48A !important; padding-left:.8rem; box-shadow:inset 2px 0 0 var(--bad)}
+.pg-dl{margin:.6rem 0 1rem; display:grid; gap:.1rem}
+.pg-kv{display:grid; grid-template-columns:10.5rem minmax(0,1fr); gap:.2rem .8rem; padding:.42rem 0; box-shadow:inset 0 1px 0 var(--stage-line)}
+.pg-kv dt{font-size:.78rem; color:var(--stage-ink-3)}
+.pg-kv dd{margin:0; font-size:.74rem; color:var(--stage-ink); word-break:break-all; white-space:pre-wrap; text-transform:none; letter-spacing:0}
+.pg-kv dd small{display:block; font-family:"Instrument Sans",system-ui,sans-serif; font-size:.74rem; color:var(--stage-ink-3); word-break:normal; white-space:normal; margin-top:.15rem}
+@media (max-width:560px){ .pg-kv{grid-template-columns:minmax(0,1fr)} }
+.pg-nav{display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .7rem; margin:.4rem 0 .9rem}
+.pg-nav input[type="range"]{flex:1 1 8rem; min-width:0; accent-color:var(--gold); touch-action:pan-y}
+.pg-nav .chip:disabled{opacity:.35; cursor:default}
+.pg-nav__lab{font-size:.8rem; color:var(--stage-ink); flex-basis:100%}
+.pg-states{display:flex; flex-wrap:wrap; gap:.9rem 1.1rem; min-height:9.2rem}
+.pg-state{margin:0}
+.pg-state figcaption{font-size:.7rem; color:var(--stage-ink-3); margin-top:.35rem; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.pg-grid{display:grid; grid-template-columns:repeat(4,1.85rem); gap:2px}
+.pg-grid span{
+  font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.72rem; line-height:1.85rem; text-align:center;
+  color:var(--stage-ink-2); background:rgba(255,255,255,.045); border-radius:2px;
+}
+.pg-grid span.is-new{color:#1A1611; background:var(--gold)}
+.pg-legend{display:flex; flex-wrap:wrap; gap:.3rem 1.1rem; font-size:.74rem; color:var(--stage-ink-3); margin-bottom:.6rem}
+.pg-leg--2{color:var(--gold)}
+.pg-bytes{display:flex; flex-wrap:wrap; gap:.5rem 3px}
+.pg-col{display:flex; flex-direction:column; gap:2px; width:1.7rem; text-align:center; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.7rem; line-height:1.5rem}
+.pg-col span{background:rgba(255,255,255,.045); border-radius:2px; color:var(--stage-ink-2)}
+.pg-col .pg-c1{color:var(--stage-ink-3)}
+.pg-col .pg-c2{color:#1A1611; background:var(--gold)}
+.pg-col .pg-cc{background:none; color:var(--stage-ink)}
+.pg-lanes{display:grid; gap:.5rem; margin:.4rem 0 1.2rem}
+.pg-lane{display:flex; flex-wrap:wrap; align-items:center; gap:.35rem .5rem; font-size:.78rem}
+.pg-lane__io{color:var(--stage-ink-2); word-break:break-all}
+.pg-lane__box{color:#1A1611; background:var(--gold); border-radius:3px; padding:.2rem .55rem; font-weight:600}
+.pg-lane__arrow{color:var(--stage-ink-3)}
+.pg-sub{margin-top:1.1rem; padding-top:1rem; box-shadow:inset 0 1px 0 var(--stage-line)}
+.pg-group{display:flex; flex-direction:column; gap:.5rem}
+.pg-group > span{font-size:.72rem; color:var(--stage-ink-3); letter-spacing:.04em}
+.pg-group .chip{font-size:.74rem}
+.pg-caution{font-size:.8rem !important; color:var(--stage-ink-2) !important; padding:.7rem .8rem; border-radius:4px; box-shadow:inset 0 0 0 1px rgba(224,119,95,.45); background:rgba(224,119,95,.07)}
+.pg-caution b{color:#F0C2B4; font-weight:600}
+.pg-note{font-size:.76rem !important; color:var(--stage-ink-3) !important}
+.pg-schema{display:block; width:100%; height:auto; max-width:460px; margin:1.2rem 0 .6rem; color:var(--ink-2)}
+.pg-schema text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:12px; fill:var(--ink-2)}
+.pg-schema .t{fill:var(--ink); font-weight:600}
+.pg-schema .a{stroke:var(--accent); fill:none}
+.pg-schema .af{fill:var(--accent)}
+.pg-schema .box{fill:none; stroke:currentColor; stroke-width:1.1}
+.pg-list{margin:0 0 1rem; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.pg-list li{margin-bottom:.5em}
+.pg-list b{color:var(--ink); font-weight:600}
+.demo-cols h3{font-size:1rem; margin:1.4rem 0 .5rem}
+.demo-cols .mono{font-size:.82em; text-transform:none; letter-spacing:0}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-CNA-500 · mypgp</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Calcul numérique</span>
+  <h1>my_pgp</h1>
+  <p class="demo-hero__lede">Un outil de chiffrement en ligne de commande, écrit à deux sans aucune bibliothèque de cryptographie : XOR, AES, RSA, X25519 et un mode hybride façon PGP. Ici, vous tapez un message et une clé, vous voyez la réponse du programme et le détail de son calcul.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en C++. Cette page en est une version web : j'ai réécrit les mêmes calculs en JavaScript, avec les mêmes commandes, les mêmes formats et les mêmes messages d'erreur. Projet de 3<sup>e</sup> année fait à deux : ma part est le XOR, l'AES, la lecture des octets et les deux modes hybrides.</p>
+</section>
+
+<section class="wrap demo-stage" id="pg-top">
+  <div class="stage pg">
+    <div class="stage__main">
+      <div class="pg-pick">
+        <div class="pg-pick__row"><span>Système</span><div class="chips" id="pg-systems" role="group" aria-label="Système de chiffrement"></div></div>
+        <div class="pg-pick__row"><span>Mode</span>
+          <div class="chips" id="pg-modes" role="group" aria-label="Mode">
+            <button class="chip" type="button" data-mode="c">-c chiffrer</button>
+            <button class="chip" type="button" data-mode="d">-d déchiffrer</button>
+            <button class="chip" type="button" data-mode="g">-g créer des clés</button>
+          </div>
+          <button class="chip" type="button" id="pg-block" aria-pressed="false">-b un seul bloc</button>
+        </div>
+      </div>
+
+      <div class="pg-fields">
+        <label class="field" id="pg-msg-field"><span id="pg-msg-label">Message</span>
+          <textarea id="pg-msg" rows="3" maxlength="20000" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+        </label>
+        <label class="field"><span id="pg-a-label">Clé</span>
+          <textarea id="pg-a" rows="2" maxlength="5000" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+        </label>
+        <label class="field" id="pg-b-field" hidden><span id="pg-b-label">Clé RSA</span>
+          <textarea id="pg-b" rows="3" maxlength="5000" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+        </label>
+      </div>
+      <div class="pg-tools">
+        <button class="btn btn--ghost" type="button" id="pg-tool-key">Clé au hasard</button>
+        <select class="pg-sel" id="pg-tool-size" aria-label="Taille de la clé AES">
+          <option value="128">128 bits</option><option value="192">192 bits</option><option value="256">256 bits</option>
+        </select>
+        <button class="btn btn--ghost" type="button" id="pg-tool-primes" hidden>Deux nombres premiers au hasard</button>
+        <select class="pg-sel" id="pg-tool-bits" aria-label="Taille des nombres premiers" hidden>
+          <option value="16">16 bits</option><option value="64">64 bits</option><option value="128">128 bits</option><option value="256" selected>256 bits</option>
+        </select>
+        <button class="btn btn--ghost" type="button" id="pg-tool-seed" hidden>Graine au hasard</button>
+      </div>
+
+      <div class="term pg-term" id="pg-term" aria-live="polite" aria-label="Ligne de commande et réponse du programme"></div>
+      <div class="stage__bar pg-run">
+        <button class="btn" type="button" id="pg-run">Exécuter</button>
+        <button class="btn btn--ghost" type="button" id="pg-chain">Déchiffrer cette sortie</button>
+        <span class="stage__status" role="status" id="pg-status">Prêt</span>
+      </div>
+
+      <div class="pg-steps">
+        <span class="label">Étapes internes</span>
+        <div id="pg-steps"></div>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <span class="label">Exemples prêts</span>
+      <div class="pg-group">
+        <span>Ceux du README du projet, tels quels</span>
+        <div class="chips" id="pg-readme"></div>
+      </div>
+      <div class="pg-group">
+        <span>Trois cas écrits pour cette page (textes fictifs)</span>
+        <div class="chips" id="pg-usecases"></div>
+      </div>
+      <label class="field" id="pg-ring-field">Trousseau : les paires de clés connues de la page
+        <select id="pg-ring"></select>
+      </label>
+      <div class="stats pg-stats">
+        <div class="stat"><b id="pg-st-in">–</b><span>octets en entrée</span></div>
+        <div class="stat"><b id="pg-st-out">–</b><span>octets en sortie</span></div>
+        <div class="stat"><b id="pg-st-key">–</b><span>bits de clé</span></div>
+        <div class="stat"><b id="pg-st-time">–</b><span>temps de calcul</span></div>
+      </div>
+      <p class="pg-caution"><b>Outil d'apprentissage.</b> Ne l'utilisez pas pour de vrais secrets. Le RSA est sans bourrage, l'AES chiffre bloc par bloc sans aléa, et les clés s'affichent à l'écran. Pour un vrai besoin, on prend une bibliothèque reconnue.</p>
+      <p class="pg-note">Comme avec <span class="mono">echo</span>, un retour à la ligne est ajouté à la fin du message. Rien ne quitte votre navigateur.</p>
+      <p class="pg-caution" id="pg-nobig" hidden>Votre navigateur ne gère pas les très grands nombres (BigInt). RSA, X25519 et les modes hybrides sont désactivés ; XOR et AES fonctionnent.</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Lancez un exemple.</b> Cliquez sur « aes -c -b ». Le terminal montre la commande et la réponse du programme : <span class="mono">744ce22c…</span>, la même que dans le README.</span></li>
+      <li><span><b>Suivez les tours d'AES.</b> Sous le terminal, déplacez le curseur ou cliquez sur « Tour suivant ». La grille change à chaque étape : SubBytes, ShiftRows, MixColumns, AddRoundKey.</span></li>
+      <li><span><b>Déchiffrez.</b> Cliquez sur « Déchiffrer cette sortie ». La page prépare la commande inverse et retrouve « All men must die ».</span></li>
+      <li><span><b>Créez vos clés.</b> Choisissez <span class="mono">rsa</span>, puis « -g créer des clés », puis « Deux nombres premiers au hasard ». Vous voyez p, q, n, e et d. Cliquez ensuite sur « Chiffrer avec cette clé publique », changez le message, puis déchiffrez.</span></li>
+      <li><span><b>Essayez le mode hybride.</b> Cliquez sur « Fichier confidentiel ». La sortie tient sur deux lignes : la clé de session chiffrée par RSA, puis le texte chiffré par AES.</span></li>
+      <li><span><b>Faites une erreur.</b> Retirez un caractère de la clé. Le programme refuse, avec son vrai message d'erreur et le code de sortie 84.</span></li>
+    </ol>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>Le programme se lance ainsi : <span class="mono">./my_pgp SYSTÈME MODE [OPTIONS] [clé]</span>. Le message arrive par l'entrée standard. Les clés et les textes chiffrés s'écrivent en hexadécimal, l'octet de poids faible en premier.</p>
+    <ul class="pg-list">
+      <li><b>XOR.</b> Chaque octet du message est combiné avec un octet de la clé. Refaire l'opération avec la même clé redonne le message.</li>
+      <li><b>AES.</b> Le message est coupé en blocs de 16 octets. Chaque bloc passe par 10, 12 ou 14 tours selon la taille de la clé. La table de substitution est calculée par le programme, pas recopiée.</li>
+      <li><b>RSA.</b> Deux nombres premiers donnent une clé publique pour chiffrer et une clé privée pour déchiffrer. Les nombres font des centaines de chiffres : le projet a sa propre classe de grands entiers.</li>
+      <li><b>X25519.</b> Un échange de clé sur une courbe elliptique. Les deux côtés calculent le même secret sans jamais l'envoyer. Une étiquette de contrôle détecte toute modification du message.</li>
+    </ul>
+    <p>Le mode hybride réunit les deux familles, comme le fait PGP. Un chiffrement symétrique est rapide mais il faut partager la clé. Un chiffrement asymétrique règle le partage mais il est lent et limité en taille. On chiffre donc le message avec une clé de session, et seulement cette petite clé avec RSA.</p>
+    <svg class="pg-schema" viewBox="0 0 440 178" role="img" aria-label="Schéma du mode hybride : la clé de session est chiffrée par RSA avec la clé publique du destinataire et donne la ligne 1. Le message est chiffré par AES avec la clé de session et donne la ligne 2.">
+      <rect class="box" x="4" y="22" width="112" height="34" rx="3"/>
+      <text class="t" x="60" y="43" text-anchor="middle">clé de session</text>
+      <rect class="box" x="4" y="118" width="112" height="34" rx="3"/>
+      <text class="t" x="60" y="139" text-anchor="middle">message</text>
+      <rect class="af" x="170" y="22" width="84" height="34" rx="3" opacity=".9"/>
+      <text x="212" y="43" text-anchor="middle" style="fill:var(--ground);font-weight:600">RSA</text>
+      <rect class="af" x="170" y="118" width="84" height="34" rx="3" opacity=".9"/>
+      <text x="212" y="139" text-anchor="middle" style="fill:var(--ground);font-weight:600">AES ou XOR</text>
+      <rect class="box" x="312" y="22" width="124" height="34" rx="3"/>
+      <text x="374" y="43" text-anchor="middle">ligne 1 : clé chiffrée</text>
+      <rect class="box" x="312" y="118" width="124" height="34" rx="3"/>
+      <text x="374" y="139" text-anchor="middle">ligne 2 : texte chiffré</text>
+      <g stroke="currentColor" stroke-width="1.2" fill="none">
+        <path d="M116 39h48M159 35l6 4-6 4"/>
+        <path d="M116 135h48M159 131l6 4-6 4"/>
+        <path d="M254 39h52M301 35l6 4-6 4"/>
+        <path d="M254 135h52M301 131l6 4-6 4"/>
+      </g>
+      <path class="a" stroke-width="1.3" stroke-dasharray="4 3" d="M60 56v30h152v26M208 107l4 6 4-6"/>
+      <text x="222" y="90">la même clé chiffre le message</text>
+      <text x="212" y="14" text-anchor="middle">clé publique du destinataire</text>
+    </svg>
+    <p>Pour lire le message, le destinataire fait le chemin inverse : sa clé privée RSA redonne la clé de session, et la clé de session redonne le texte.</p>
+    <h3>Ce qui change par rapport au C++</h3>
+    <p>Les calculs suivent le code d'origine ligne par ligne. Deux différences : les grands nombres utilisent le type BigInt du navigateur à la place de notre classe BigUint, et l'aléa vient du navigateur au lieu de <span class="mono">/dev/urandom</span>.</p>
+    <p>J'ai compilé le programme et comparé les deux versions sur plus de 3 000 commandes, erreurs comprises : mêmes sorties, octet pour octet. Pour X25519, dont la sortie change à chaque fois, chaque version déchiffre ce que l'autre a chiffré.</p>
+    <p>J'ai ajouté pour le web : l'affichage des étapes internes, les boutons « au hasard » (le programme, lui, attend que vous donniez P, Q et les clés), le trousseau et le bouton qui enchaîne chiffrement et déchiffrement. Le dépôt contient aussi un bonus, des signatures RSA et un générateur de nombres premiers : je ne l'ai pas repris ici.</p>
+    <h3>Qui a fait quoi</h3>
+    <p>Nous étions deux. J'ai écrit la conversion hexadécimal-octets, la classe commune aux chiffrements symétriques avec son découpage en blocs, le XOR, l'AES complet (128, 192 et 256 bits) et les modes <span class="mono">pgp-xor</span> et <span class="mono">pgp-aes</span>. Mon coéquipier a écrit la lecture de la ligne de commande, RSA et ses grands entiers, X25519, le registre des systèmes et les tests.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Envoyer un fichier confidentiel</h3><p>Un contrat, une fiche de paie, une sauvegarde. Le mode hybride chiffre le fichier avec une clé à usage unique, et seul le destinataire peut ouvrir cette clé.</p></div>
+    <div><h3>Partager une clé sans se rencontrer</h3><p>Deux services ou deux serveurs se mettent d'accord sur un secret à travers un réseau qu'on peut écouter. C'est le rôle de RSA et de X25519, et c'est ce que fait HTTPS à chaque connexion.</p></div>
+    <div><h3>Savoir si un message a été modifié</h3><p>Avec X25519, chaque message porte une étiquette de contrôle. Changez un seul caractère du texte chiffré : le déchiffrement est refusé au lieu de rendre un texte faux.</p></div>
+    <div><h3>Ce que ce projet montre</h3><p>Du C++ structuré en briques interchangeables, des algorithmes vérifiés contre les vecteurs officiels (FIPS 197, RFC 7748, RFC 4231), et la capacité à lire une norme pour l'écrire en code.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

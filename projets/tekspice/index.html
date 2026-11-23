@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NanoTekSpice — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Un simulateur de circuits logiques : écrivez le fichier du circuit, cliquez sur les entrées et regardez les états se propager, avec le shell du vrai programme.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage.nts{grid-template-columns:272px minmax(0,1fr) 296px; grid-template-areas:"head head head" "edit view shell"}
+.nts-head{grid-area:head; padding:clamp(1rem,2.4vw,1.4rem); box-shadow:inset 0 -1px 0 var(--stage-line); display:grid; grid-template-columns:minmax(0,1fr) minmax(0,260px); gap:.8rem 1.4rem; align-items:end}
+.nts-edit{grid-area:edit; background:var(--stage-2); box-shadow:inset -1px 0 0 var(--stage-line)}
+.nts-view{grid-area:view}
+.nts-shell{grid-area:shell; background:var(--stage-2); box-shadow:inset 1px 0 0 var(--stage-line)}
+.nts-edit,.nts-view,.nts-shell{padding:clamp(1rem,2vw,1.3rem); min-width:0; display:flex; flex-direction:column; gap:.8rem}
+@media (max-width:1040px){
+  .stage.nts{grid-template-columns:minmax(0,1fr) 296px; grid-template-areas:"head head" "view shell" "edit edit"}
+  .nts-edit{box-shadow:inset 0 1px 0 var(--stage-line)}
+}
+@media (max-width:760px){
+  .stage.nts{grid-template-columns:minmax(0,1fr); grid-template-areas:"head" "view" "shell" "edit"}
+  .nts-shell{box-shadow:inset 0 1px 0 var(--stage-line)}
+  .nts-head{grid-template-columns:minmax(0,1fr)}
+}
+.nts-group{display:flex; flex-direction:column; gap:.45rem; min-width:0}
+.nts-group > span{font-size:.72rem; color:var(--stage-ink-3); letter-spacing:.04em}
+.nts-hint{grid-column:1/-1; font-size:.84rem !important; color:var(--stage-ink-2) !important; min-height:2.6em}
+.nts-small{font-size:.76rem !important; color:var(--stage-ink-3) !important; line-height:1.5 !important}
+
+.nts-filebar{display:flex; justify-content:space-between; align-items:baseline; gap:.5rem; flex-wrap:wrap}
+.nts-filebar .mono{font-size:.7rem; color:var(--stage-ink-3); word-break:break-all}
+.nts-ed{display:flex; height:22rem; background:#0F0D0A; border:1px solid var(--stage-line); border-radius:4px; overflow:hidden}
+.nts-ed:focus-within{outline:2px solid var(--gold); outline-offset:2px}
+.nts-ed pre,.nts-ed textarea{margin:0; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.74rem; line-height:1.55; padding:.5rem 0; tab-size:4}
+.nts-ed pre{flex:0 0 2.3rem; text-align:right; padding-right:.45rem; color:#6B6459; overflow:hidden; user-select:none; -webkit-user-select:none; background:rgba(255,255,255,.02)}
+.nts-ed pre b{font-weight:400; color:#15120E; background:var(--bad); display:inline-block; min-width:1.6rem; padding-right:.2rem; margin-right:-.2rem; border-radius:2px}
+.nts-ed textarea{flex:1; min-width:0; border:0; outline:0; resize:none; background:transparent; color:var(--stage-ink); padding-left:.5rem; padding-right:.5rem; white-space:pre; overflow:auto; overflow-wrap:normal}
+.nts-msg{font-size:.74rem}
+.nts-msg[hidden]{display:none}
+.nts-row{display:flex; flex-wrap:wrap; gap:.5rem; align-items:center}
+.nts-row .btn{padding:.45rem .85rem; font-size:.8rem}
+
+.nts-schema{background:#0C0A08; border-radius:4px; box-shadow:inset 0 0 0 1px var(--stage-line); overflow:auto; max-height:500px; min-height:200px; display:flex; padding:.4rem;
+  background-image:radial-gradient(rgba(240,234,224,.07) 1px,transparent 1px); background-size:16px 16px}
+.nts-schema.is-off{opacity:.3; filter:grayscale(1)}
+.nts-svg{display:block; margin:auto; max-width:100%; height:auto; flex:0 0 auto}
+.nts-empty{margin:auto; font-size:.84rem}
+.nts-svg text{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:11px; fill:#D9D1C3}
+.nts-svg .w{fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+.nts-svg .w-1{stroke:#E9A855; stroke-width:2.6}
+.nts-svg .w-0{stroke:#5F86AD}
+.nts-svg .w-u{stroke:#857C6E; stroke-dasharray:5 4}
+.nts-svg .w-dead{stroke:#B0604F; stroke-dasharray:1 5}
+.nts-svg .box{fill:#1E1A14; stroke:rgba(240,234,224,.28)}
+.nts-svg .nd-click{cursor:pointer; outline:none}
+.nts-svg .nd-click:hover .box,.nts-svg .nd-click:focus-visible .box{stroke:#E9A855; stroke-width:1.6}
+.nts-svg .led{fill:none; stroke:#857C6E; stroke-dasharray:3 2}
+.nts-svg .val{font-size:10.5px; fill:#B9AF9D}
+.nts-svg .v1 .led{fill:#E9A855; stroke:#E9A855; stroke-dasharray:none}
+.nts-svg .v1 .val{fill:#1A1611}
+.nts-svg .v0 .led{fill:#22303F; stroke:#5F86AD; stroke-dasharray:none}
+.nts-svg .v0 .val{fill:#C7D8EA}
+.nts-svg .gate{fill:#1E1A14; stroke:#B9AF9D; stroke-width:1.2}
+.nts-svg .chip{fill:rgba(255,255,255,.035); stroke:rgba(240,234,224,.3)}
+.nts-svg .leg{stroke:#8D8477; stroke-width:1.3; fill:none}
+.nts-svg .bub{fill:#15120E; stroke:#B9AF9D; stroke-width:1.2}
+.nts-svg .sym{font-size:12px; fill:#F0EADF}
+.nts-svg .cap{font-size:9.5px; fill:#A39A8A}
+.nts-svg .pn{font-size:8px; fill:#8D8477}
+.nts-svg .pn-x{fill:#D08A7A}
+.nts-svg .pend{font-size:9px; fill:#E9A855}
+.nts-svg .stub{stroke:#B0604F; stroke-dasharray:2 3; fill:none}
+.nts-svg .ico{fill:none; stroke:#A39A8A; stroke-width:1.2}
+
+.nts-legend{display:flex; flex-wrap:wrap; gap:.3rem 1rem; font-size:.72rem; color:var(--stage-ink-3)}
+.nts-legend span{display:inline-flex; align-items:center; gap:.4rem}
+.nts-legend i{display:inline-block; width:22px; height:0; border-top:2px solid #E9A855}
+.nts-legend i.l0{border-top-color:#5F86AD}
+.nts-legend i.lu{border-top:2px dashed #857C6E}
+.nts-legend i.ld{border-top:2px dotted #B0604F}
+.nts-controls{display:flex; flex-wrap:wrap; gap:.6rem 1rem; align-items:center}
+.nts-controls .field{flex:1 1 150px; min-width:0}
+.nts-check{display:flex; gap:.5rem; align-items:flex-start; font-size:.78rem; color:var(--stage-ink-2); cursor:pointer}
+.nts-check input{accent-color:var(--gold); margin-top:.25em}
+.nts-chrono{min-height:60px; overflow:hidden}
+.nts-chrono svg{display:block}
+.nts-chrono text{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.nts-chrono .c-name{font-size:10.5px; fill:#B9AF9D}
+.nts-chrono .c-name.c-out{fill:#E9A855}
+.nts-chrono .c-tick{font-size:9px; fill:#8D8477; text-anchor:middle}
+.nts-chrono .c-grid{stroke:rgba(240,234,224,.1)}
+.nts-chrono .c-sig{fill:none; stroke-width:1.8; stroke-linejoin:round}
+.nts-chrono .c-sig.c-in{stroke:#9FB8D1}
+.nts-chrono .c-sig.c-out{stroke:#E9A855}
+.nts-chrono .c-u{fill:none; stroke:#857C6E; stroke-width:1.4; stroke-dasharray:3 3}
+
+.nts-term{height:19rem; font-size:.74rem}
+.nts-form{display:flex; align-items:center; gap:.4rem; background:#0C0A08; border-radius:4px; box-shadow:inset 0 0 0 1px var(--stage-line); padding:0 .7rem; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.8rem; color:var(--gold)}
+.nts-form:focus-within{box-shadow:inset 0 0 0 1px var(--gold)}
+.nts-form input{flex:1; min-width:0; font:inherit; color:var(--stage-ink); background:transparent; border:0; outline:0; padding:.6rem 0}
+.nts-form input::placeholder{color:#6B6459}
+.nts-shell .stats{grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem}
+.nts-shell .stat{padding:.5rem .6rem}
+.nts-shell .stat b{font-size:1.35rem}
+.nts-help{font-size:.8rem; color:var(--stage-ink-2)}
+.nts-help summary{cursor:pointer; color:var(--stage-ink); font-size:.82rem}
+.nts-help summary:hover{color:var(--gold)}
+.nts-help .dtable{margin-top:.5rem; font-size:.74rem}
+.nts-help .dtable td{padding:.35rem .3rem; vertical-align:top}
+.nts-help .dtable td:first-child{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.7rem; color:var(--stage-ink)}
+
+.nts-fig{display:block; width:100%; height:auto; max-width:460px; margin:1.2rem 0 .6rem}
+.nts-fig text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:12px; fill:var(--ink-2)}
+.nts-fig .b{fill:none; stroke:var(--ink-3)}
+.nts-fig .a{fill:none; stroke:var(--accent)}
+.nts-fig .af{fill:var(--accent)}
+.nts-list{margin:0 0 1rem; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.nts-list li{margin-bottom:.45em}
+.demo-cols h3{font-size:1rem; margin:1.4rem 0 .5rem}
+.demo-cols .mono,.demo-biz .mono{font-size:.86em}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-OOP-400 · tekspice</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Moteurs et rendu</span>
+  <h1>NanoTekSpice</h1>
+  <p class="demo-hero__lede">Un simulateur de circuits logiques. On décrit un circuit dans un fichier texte : ses composants, puis ses fils. Le programme le monte, puis calcule ses sorties à chaque tick, avec trois états possibles : 0, 1 ou indéfini.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en C++, à deux. Cette page en est une version web : j'ai réécrit les mêmes règles en JavaScript, avec le même format de fichier et les mêmes commandes, pour qu'elles tournent dans votre navigateur. Le schéma, le chronogramme et le clic sur les entrées sont des ajouts de cette page.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage nts" id="nts-stage">
+
+    <div class="nts-head">
+      <div class="nts-group">
+        <span>Circuits écrits pour cette page, dans le format du projet</span>
+        <div class="chips" id="nts-chips"></div>
+      </div>
+      <label class="field">Tous les fichiers, dont ceux du projet
+        <select id="nts-select"></select>
+      </label>
+      <p class="nts-hint" id="nts-hint"></p>
+    </div>
+
+    <div class="nts-edit">
+      <span class="label">Fichier du circuit</span>
+      <div class="nts-filebar"><span class="nts-small">Modifiez le texte : le programme se relance.</span><span class="mono" id="nts-file"></span></div>
+      <div class="nts-ed">
+        <pre id="nts-gutter" aria-hidden="true"></pre>
+        <textarea id="nts-src" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off" aria-label="Fichier .nts du circuit"></textarea>
+      </div>
+      <div class="term nts-msg" id="nts-msg" role="alert" hidden></div>
+      <div class="nts-row">
+        <button class="btn btn--ghost" type="button" id="nts-reset">Remettre le fichier d'origine</button>
+      </div>
+      <details class="nts-help">
+        <summary>Les 17 composants du projet</summary>
+        <table class="dtable">
+          <tr><td>input</td><td>entrée, réglée dans le shell (broche 1)</td></tr>
+          <tr><td>clock</td><td>comme input, mais s'inverse à chaque tick</td></tr>
+          <tr><td>true false</td><td>constantes 1 et 0</td></tr>
+          <tr><td>output</td><td>sortie affichée par display (broche 1)</td></tr>
+          <tr><td>and or xor nand nor</td><td>entrées 1 et 2, sortie 3</td></tr>
+          <tr><td>not</td><td>entrée 1, sortie 2</td></tr>
+          <tr><td>4081 4071 4030 4011 4001</td><td>4 portes AND, OR, XOR, NAND, NOR : (1, 2 → 3), (5, 6 → 4), (8, 9 → 10), (12, 13 → 11)</td></tr>
+          <tr><td>4069</td><td>6 inverseurs : 1 → 2, 3 → 4, 5 → 6, 9 → 8, 11 → 10, 13 → 12</td></tr>
+        </table>
+        <p class="nts-small" style="margin-top:.6rem">Un <span class="mono">#</span> ouvre un commentaire. Un lien s'écrit <span class="mono">nom:broche nom:broche</span>.</p>
+      </details>
+    </div>
+
+    <div class="nts-view">
+      <div class="stage__bar" style="margin-bottom:0">
+        <button class="btn" type="button" id="nts-play">Jouer le scénario</button>
+        <button class="btn btn--ghost" type="button" id="nts-sim">simulate</button>
+        <button class="btn btn--ghost" type="button" id="nts-loop" aria-pressed="false">loop</button>
+        <span class="stage__status" role="status" id="nts-status">Prêt</span>
+      </div>
+      <div class="nts-schema" id="nts-schema"></div>
+      <div class="nts-legend" aria-hidden="true">
+        <span><i></i>1</span><span><i class="l0"></i>0</span><span><i class="lu"></i>U, indéfini</span><span><i class="ld"></i>lien sans effet</span>
+      </div>
+      <div class="nts-controls">
+        <label class="nts-check"><input type="checkbox" id="nts-auto" checked><span>Lancer <span class="mono">simulate</span> après chaque clic sur une entrée</span></label>
+        <label class="field">Vitesse de loop : <span id="nts-speed-out"></span>
+          <input type="range" id="nts-speed" min="1" max="20" step="1" value="3">
+        </label>
+      </div>
+      <span class="label">Chronogramme</span>
+      <div class="nts-chrono" id="nts-chrono"></div>
+      <p class="nts-small">Une colonne par tick. Entrées en bleu, sorties en doré, pointillés quand la valeur est indéfinie.</p>
+    </div>
+
+    <div class="nts-shell">
+      <span class="label">Shell du programme</span>
+      <div class="term nts-term" id="nts-term" aria-live="off" tabindex="0" aria-label="Sortie du programme"></div>
+      <form class="nts-form" id="nts-form" autocomplete="off">
+        <span aria-hidden="true">&gt;</span>
+        <input type="text" id="nts-cmd" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Commande du shell">
+      </form>
+      <div class="chips">
+        <button class="chip" type="button" data-cmd="display">display</button>
+        <button class="chip" type="button" data-cmd="simulate">simulate</button>
+        <button class="chip" type="button" data-cmd="help">help</button>
+        <button class="chip" type="button" data-cmd="exit">exit</button>
+        <button class="chip" type="button" id="nts-restart">Relancer</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="nts-tick">0</b><span>tick</span></div>
+        <div class="stat"><b id="nts-ncomp">–</b><span>composants</span></div>
+        <div class="stat"><b id="nts-nlink">–</b><span>liens</span></div>
+      </div>
+      <p class="nts-small">Mêmes commandes et même affichage que le programme C++. Une valeur tapée (<span class="mono">a=1</span>) n'est prise en compte qu'au <span class="mono">simulate</span> suivant, comme dans le projet.</p>
+    </div>
+
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Cliquez sur « Jouer le scénario ».</b> L'additionneur est chargé. Les commandes se tapent toutes seules dans le shell : 1 + 1 donne <span class="mono">s: 0</span> et <span class="mono">cout: 1</span>. Les fils à 1 passent en doré.</span></li>
+      <li><span><b>Cliquez sur une entrée du schéma.</b> Les pastilles à gauche (a, b, cin) changent de valeur. Le shell montre la commande équivalente, puis le circuit se recalcule.</span></li>
+      <li><span><b>Tapez dans le shell.</b> Essayez <span class="mono">a=U</span>, <span class="mono">simulate</span>, puis <span class="mono">display</span>. Une entrée indéfinie rend indéfinies les sorties qui en dépendent.</span></li>
+      <li><span><b>Lancez l'horloge.</b> Choisissez « Horloge », puis « Jouer le scénario ». La commande <span class="mono">loop</span> fait tourner les ticks. Réglez la vitesse, arrêtez avec le bouton ou Ctrl + C.</span></li>
+      <li><span><b>Cassez le fichier.</b> Dans l'éditeur, écrivez <span class="mono">and</span> seul sur une ligne, ou reliez un composant qui n'existe pas. Le message d'erreur du vrai programme s'affiche, et la ligne est marquée en rouge.</span></li>
+    </ol>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>Le programme lit le fichier ligne par ligne. Dans <span class="mono">.chipsets:</span>, chaque ligne donne un type et un nom : une fabrique crée le bon composant. Dans <span class="mono">.links:</span>, chaque ligne relie deux broches.</p>
+    <svg class="nts-fig" viewBox="0 0 460 150" role="img" aria-label="Le fichier est lu par le parseur, qui remplit le circuit. Le shell pilote le circuit. Une sortie demande sa valeur à la porte, qui la demande aux entrées.">
+      <rect class="b" x="1" y="10" width="92" height="40" rx="4"/><text x="47" y="34" text-anchor="middle">fichier .nts</text>
+      <rect class="b" x="131" y="10" width="92" height="40" rx="4"/><text x="177" y="34" text-anchor="middle">parseur</text>
+      <rect class="a" x="261" y="10" width="92" height="40" rx="4"/><text x="307" y="34" text-anchor="middle">circuit</text>
+      <rect class="b" x="391" y="10" width="68" height="40" rx="4"/><text x="425" y="34" text-anchor="middle">shell</text>
+      <path class="b" d="M93 30h34M223 30h34M387 30h-30"/><path class="af" d="M131 30l-7-4v8zM261 30l-7-4v8zM353 30l7-4v8z"/>
+      <rect class="b" x="40" y="96" width="70" height="30" rx="15"/><text x="75" y="115" text-anchor="middle">entrées</text>
+      <rect class="b" x="195" y="92" width="70" height="38" rx="4"/><text x="230" y="115" text-anchor="middle">porte</text>
+      <rect class="b" x="350" y="96" width="70" height="30" rx="15"/><text x="385" y="115" text-anchor="middle">sortie</text>
+      <path class="a" d="M350 111H272M195 111H117"/><path class="af" d="M265 111l7-4v8zM110 111l7-4v8z"/>
+      <text x="310" y="103" text-anchor="middle">« ta valeur ? »</text><text x="155" y="103" text-anchor="middle">« ta valeur ? »</text>
+      <text x="230" y="146" text-anchor="middle">le calcul remonte les fils, de la sortie vers les entrées</text>
+    </svg>
+    <p>À chaque <span class="mono">simulate</span>, le tick avance de 1. Les valeurs tapées sont appliquées, les horloges s'inversent, puis chaque sortie demande sa valeur au composant branché sur elle. Ce composant demande à son tour à ses propres entrées, et ainsi de suite.</p>
+    <p>Les portes calculent avec trois états. Un AND avec une entrée à 0 répond 0, même si l'autre est indéfinie. Sinon, une entrée indéfinie donne une sortie indéfinie.</p>
+    <h3>Les boucles</h3>
+    <p>Si un fil ramène la sortie d'un composant vers sa propre entrée, le calcul tournerait sans fin. Chaque composant note donc qu'il est « en cours de calcul ». Si on lui redemande une valeur pendant ce temps, il répond « indéfini » et le calcul s'arrête. Le circuit « Boucle » le montre.</p>
+    <p>Limite connue du projet : cette marque est posée par composant, pas par broche. Deux portes d'une même puce branchées l'une derrière l'autre donnent donc « indéfini ». C'est le cas du fichier <span class="mono">example.nts</span> du projet. La page reproduit ce comportement tel quel. Le simulateur ne garde pas non plus de mémoire d'un tick à l'autre : une bascule ne retient pas sa valeur.</p>
+    <h3>Ce qui vient du projet, ce qui est ajouté</h3>
+    <ul class="nts-list">
+      <li><b>Repris du projet :</b> le format du fichier, les 17 composants, les tables de vérité, le calcul, les commandes du shell, le texte de <span class="mono">display</span> et les messages d'erreur. Les fichiers du dossier <span class="mono">test/</span> sont copiés tels quels.</li>
+      <li><b>Ajouté pour le web :</b> le schéma, le chronogramme, le clic sur les entrées, le numéro de ligne marqué pour toutes les erreurs, la vitesse réglable de <span class="mono">loop</span> (le vrai programme tourne aussi vite que la machine) et six circuits d'exemple.</li>
+      <li><b>Vérifié :</b> j'ai compilé le programme C++ et comparé sa sortie à celle de cette page, sur tous les fichiers et sur 1 500 fichiers tirés au hasard. Les sorties sont identiques.</li>
+      <li><b>Ma part :</b> nous étions deux. J'ai écrit la lecture du fichier, le circuit (fabrique, liens, ticks, affichage), le shell et la gestion des erreurs. Mon coéquipier a écrit la plupart des composants.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Tester une logique avant de la câbler</h3><p>Un vote « 2 capteurs sur 3 » ou un verrouillage de sécurité se vérifie sur toutes les combinaisons d'entrées, sans matériel.</p></div>
+    <div><h3>Décrire un système dans un fichier texte</h3><p>Le même principe sert aux fichiers de configuration : un format simple, un parseur strict, et des erreurs qui disent où est le problème.</p></div>
+    <div><h3>Ajouter un composant sans toucher au reste</h3><p>Chaque composant suit la même interface et passe par une fabrique. C'est la base d'un moteur de règles ou d'un système de plugins.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="circuits.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

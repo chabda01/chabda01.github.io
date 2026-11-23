@@ -1,0 +1,17 @@
+{
+    "name": "Level 2 - The Bydos Swarm",
+    "waves": [
+        { "time": 1.0, "type": "kamikaze", "count": 3, "y": 100, "pattern": "linear", "spacing": 150 },
+        { "time": 5.0, "type": "turret", "count": 1, "y": 60, "pattern": "linear" },
+        { "time": 5.5, "type": "turret", "count": 1, "y": 620, "pattern": "linear" },
+        { "time": 9.0, "type": "snake", "count": 8, "y": 200, "pattern": "sine", "interval": 0.35 },
+        { "time": 14.0, "type": "kamikaze", "count": 4, "y": 80, "pattern": "linear", "spacing": 150, "drop": "life", "dropChance": 0.25 },
+        { "time": 18.0, "type": "script:zigzag", "count": 3, "y": 150, "pattern": "linear", "spacing": 150 },
+        { "time": 23.0, "type": "snake", "count": 10, "y": 500, "pattern": "sine", "interval": 0.3 },
+        { "time": 26.0, "type": "bydos", "count": 1, "y": 360, "pattern": "linear", "drop": "force" },
+        { "time": 28.0, "type": "turret", "count": 1, "y": 60, "pattern": "linear" },
+        { "time": 28.5, "type": "turret", "count": 1, "y": 620, "pattern": "linear" },
+        { "time": 31.0, "type": "script:orbiter", "count": 1, "y": 360, "pattern": "linear", "drop": "speed" },
+        { "time": 36.0, "type": "kamikaze", "count": 5, "y": 60, "pattern": "linear", "spacing": 120 }
+    ]
+}

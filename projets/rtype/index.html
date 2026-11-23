@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>R-Type — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Un shoot'em up et son moteur ECS maison : jouez dans votre navigateur et regardez le moteur travailler, entité par entité.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage.rty{grid-template-columns:minmax(0,1fr) minmax(0,372px)}
+@media (max-width:980px){
+  .stage.rty{grid-template-columns:minmax(0,1fr)}
+  .stage.rty .stage__side{box-shadow:inset 0 1px 0 var(--stage-line)}
+}
+.rty-hud{display:flex; flex-wrap:wrap; gap:.3rem 1.1rem; align-items:baseline; margin-bottom:.6rem;
+  font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.76rem; color:var(--stage-ink-2)}
+.rty-hud b{color:var(--stage-ink); font-weight:400}
+.rty-hud .rty-lives{color:var(--bad); letter-spacing:.12em}
+.rty-hud .rty-bonus{color:var(--gold)}
+.rty-view{position:relative; background:#05070D; border-radius:3px; overflow:hidden; box-shadow:0 0 0 1px var(--stage-line); aspect-ratio:16/9; outline:0}
+.rty-view:focus-visible{box-shadow:0 0 0 2px var(--gold)}
+.rty-view canvas{position:absolute; inset:0; width:100%; height:100%; border-radius:0; touch-action:pan-y; user-select:none; -webkit-user-select:none}
+.rty-view.is-live canvas{touch-action:none}
+.rty-over{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.7rem;
+  text-align:center; padding:1rem; background:rgba(5,7,13,.72)}
+.rty-over[hidden]{display:none}
+.rty-over h3{font-family:"Instrument Serif",Georgia,serif; font-weight:400; font-size:clamp(1.4rem,4.4vw,2.2rem); line-height:1.1; color:var(--stage-ink)}
+.rty-over p{font-size:.84rem; max-width:44ch; margin:0}
+.rty-pad{display:none; gap:.5rem; margin-top:.7rem}
+.rty-pad button{flex:1; font:inherit; font-size:.84rem; font-weight:600; padding:.85rem .4rem; border-radius:6px; cursor:pointer;
+  color:var(--stage-ink); background:rgba(255,255,255,.05); border:1px solid var(--stage-line);
+  touch-action:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none}
+.rty-pad button.is-down{background:var(--gold); border-color:var(--gold); color:#1A1611}
+.rty.is-touch .rty-pad{display:flex}
+.rty-hint{margin:.7rem 0 0; font-size:.8rem !important; color:var(--stage-ink-3) !important}
+.rty-hint kbd{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.72rem; color:var(--stage-ink-2);
+  padding:.08rem .34rem; border-radius:3px; box-shadow:inset 0 0 0 1px var(--stage-line); white-space:nowrap}
+.rty-block{display:flex; flex-direction:column; gap:.9rem; margin-top:1.3rem; padding-top:1.1rem; box-shadow:inset 0 1px 0 var(--stage-line)}
+.rty-group{display:flex; flex-direction:column; gap:.45rem}
+.rty-group > span{font-size:.72rem; color:var(--stage-ink-3); letter-spacing:.04em}
+.rty-sys{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 1.4rem}
+@media (max-width:640px){ .rty-sys{grid-template-columns:minmax(0,1fr)} }
+.rty-sys div{display:grid; grid-template-columns:1.3rem minmax(0,1fr) 3.6rem; align-items:baseline; gap:.4rem; padding:.3rem 0;
+  box-shadow:inset 0 -1px 0 var(--stage-line); font-size:.76rem; color:var(--stage-ink-2); position:relative}
+.rty-sys div i{font-style:normal; color:var(--stage-ink-3); font-size:.68rem}
+.rty-sys div span{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rty-sys div b{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-weight:400; font-size:.7rem; text-align:right; color:var(--stage-ink)}
+.rty-sys div u{position:absolute; left:0; bottom:0; height:2px; width:100%; background:var(--gold); transform-origin:left center; transform:scaleX(0); text-decoration:none; opacity:.8}
+.rty-note{font-size:.74rem !important; color:var(--stage-ink-3) !important; margin:0}
+.rty-table{display:block; width:100%; height:auto; border-radius:0}
+.rty-side .stats{grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem}
+.rty-side .stat b{font-size:1.45rem}
+.rty-files summary{cursor:pointer; color:var(--stage-ink); font-size:.84rem}
+.rty-files summary:hover{color:var(--gold)}
+.rty-files[open] summary{margin-bottom:.8rem}
+.rty-files textarea{height:15rem; white-space:pre; overflow:auto; tab-size:4; overflow-wrap:normal}
+.rty-files .term{font-size:.72rem; max-height:17rem; white-space:pre; word-break:normal}
+.rty-actions{display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; margin:.7rem 0}
+.rty-two{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:.8rem}
+.rty-two > div{min-width:0}
+.rty-two h4{font-size:.72rem; font-weight:400; color:var(--stage-ink-3); letter-spacing:.04em; margin:0 0 .35rem}
+.rty-msg[hidden]{display:none}
+.rty-schema{display:block; width:100%; height:auto; max-width:460px; margin:1.1rem 0 .6rem; color:var(--ink-2)}
+.rty-schema text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:11.5px; fill:var(--ink-2)}
+.rty-schema .h{fill:var(--ink); font-weight:600}
+.rty-schema .af{fill:var(--accent)}
+.rty-schema .a{stroke:var(--accent); fill:none}
+.rty-list{margin:0 0 1rem; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.rty-list li{margin-bottom:.45em}
+.demo-cols h3{font-size:1rem; margin:1.4rem 0 .5rem}
+.rty-team{max-width:62ch; margin-top:.9rem; font-size:.9rem; color:var(--ink-2)}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-ING-500 · rtype</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Moteurs et rendu</span>
+  <h1>R-Type</h1>
+  <p class="demo-hero__lede">Notre version du shoot'em up des années 90, sur un moteur de jeu que nous écrivons nous-mêmes. Ici, vous jouez en solo, et vous voyez le moteur travailler : chaque entité, chaque composant, chaque règle.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en C++20, à quatre, et il est en cours. Cette page en est une version web : j'ai réécrit en JavaScript ma part, la logique de jeu, avec les mêmes règles et les mêmes fichiers de niveaux. Le réseau, le serveur et le client graphique sont faits par mes coéquipiers : ils ne sont pas dans cette démo.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage rty" id="rty-stage">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <button class="btn" type="button" id="rty-play">Jouer</button>
+        <button class="btn btn--ghost" type="button" id="rty-restart">Recommencer</button>
+        <span class="stage__status" role="status" id="rty-status">Prêt</span>
+      </div>
+      <div class="rty-hud" aria-live="off">
+        <span>Score <b id="rty-score">0</b></span>
+        <span>Vies <b class="rty-lives" id="rty-lives">–</b></span>
+        <span class="rty-bonus" id="rty-bonus"></span>
+      </div>
+      <div class="rty-view" id="rty-view" tabindex="0" aria-label="Zone de jeu. Flèches pour bouger, Espace pour tirer, C pour le tir chargé, X pour la Force, P pour la pause.">
+        <canvas id="rty-canvas" width="960" height="540"></canvas>
+        <div class="rty-over" id="rty-over">
+          <h3 id="rty-over-title">R-Type, en solo</h3>
+          <p id="rty-over-text">Trois niveaux, un boss à la fin. Les vagues viennent des vrais fichiers du projet.</p>
+          <button class="btn" type="button" id="rty-over-btn">Jouer</button>
+        </div>
+      </div>
+      <div class="rty-pad" id="rty-pad" aria-label="Commandes tactiles">
+        <button type="button" data-action="16">Tir</button>
+        <button type="button" data-action="32">Charge</button>
+        <button type="button" data-action="64">Force</button>
+        <button type="button" data-action="pause">Pause</button>
+      </div>
+      <p class="rty-hint" id="rty-hint"><kbd>← ↑ ↓ →</kbd> bouger · <kbd>Espace</kbd> tirer · <kbd>C</kbd> tenir puis relâcher : tir chargé · <kbd>X</kbd> lancer ou rappeler la Force · <kbd>P</kbd> pause. Au doigt : glissez sur le jeu pour déplacer le vaisseau.</p>
+
+      <div class="rty-block">
+        <span class="label">Règles de la partie</span>
+        <div class="rty-group">
+          <span>Difficulté (relance la partie)</span>
+          <div class="chips" id="rty-diff">
+            <button class="chip" type="button" data-v="easy" aria-pressed="false">easy · 5 vies</button>
+            <button class="chip" type="button" data-v="normal" aria-pressed="true">normal · 3 vies</button>
+            <button class="chip" type="button" data-v="hard" aria-pressed="false">hard · 2 vies, ennemis ×2 PV</button>
+          </div>
+        </div>
+        <div class="rty-group">
+          <span>Accessibilité (les deux options du projet)</span>
+          <div class="chips">
+            <button class="chip" type="button" id="rty-slow" aria-pressed="false">Jeu à 70 % (slow)</button>
+            <button class="chip" type="button" id="rty-auto" aria-pressed="false">Tir automatique (auto-fire)</button>
+          </div>
+        </div>
+        <div class="rty-group">
+          <span>Mode test, ajouté pour cette page</span>
+          <div class="chips" id="rty-level">
+            <button class="chip" type="button" data-v="0" aria-pressed="true">Niveau 1</button>
+            <button class="chip" type="button" data-v="1" aria-pressed="false">Niveau 2</button>
+            <button class="chip" type="button" data-v="2" aria-pressed="false">Niveau 3 · boss</button>
+          </div>
+          <div class="chips" id="rty-speed">
+            <button class="chip" type="button" data-v="1" aria-pressed="true">Vitesse ×1</button>
+            <button class="chip" type="button" data-v="2" aria-pressed="false">×2</button>
+            <button class="chip" type="button" data-v="4" aria-pressed="false">×4</button>
+            <button class="chip" type="button" id="rty-shield" aria-pressed="false">Bouclier</button>
+            <button class="chip" type="button" id="rty-boxes" aria-pressed="false">Voir les hitbox</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rty-block">
+        <span class="label">Les 14 systèmes, dans l'ordre d'un tick</span>
+        <div class="rty-sys" id="rty-sys"></div>
+        <p class="rty-note">Temps moyen par tick, en microsecondes, mesuré dans votre navigateur. L'horloge d'un navigateur est arrondie : les très petites valeurs sont des moyennes.</p>
+      </div>
+
+      <div class="rty-block">
+        <span class="label">Les fichiers du projet</span>
+        <details class="rty-files" id="rty-level-box">
+          <summary>Modifier le niveau de départ (<span class="mono" id="rty-level-file">assets/levels/level1.json</span>)</summary>
+          <label class="field"><span>Changez une vague, puis « Jouer ce fichier ». Types : bydos, kamikaze, turret, snake, boss, script:zigzag, script:orbiter.</span>
+            <textarea id="rty-src" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+          </label>
+          <div class="rty-actions">
+            <button class="btn" type="button" id="rty-apply">Jouer ce fichier</button>
+            <button class="btn btn--ghost" type="button" id="rty-reset">Remettre le fichier d'origine</button>
+          </div>
+          <div class="term rty-msg" id="rty-msg" role="alert" hidden></div>
+        </details>
+        <details class="rty-files">
+          <summary>Un monstre écrit en Lua, et sa traduction pour cette page</summary>
+          <div class="rty-two">
+            <div><h4>assets/scripts/zigzag.lua (fichier du projet)</h4><div class="term" id="rty-lua"></div></div>
+            <div><h4>La même chose en JavaScript (core.js)</h4><div class="term" id="rty-luajs"></div></div>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div class="stage__side rty-side">
+      <span class="label">Sous le capot</span>
+      <div class="stats">
+        <div class="stat"><b id="rty-s-ent">0</b><span>entités vivantes</span></div>
+        <div class="stat"><b id="rty-s-comp">0</b><span>composants vivants</span></div>
+        <div class="stat"><b id="rty-s-sys">0</b><span>systèmes exécutés par image</span></div>
+        <div class="stat"><b id="rty-s-sim">–</b><span>simulation par image</span></div>
+        <div class="stat"><b id="rty-s-pairs">0</b><span>paires testées (collisions)</span></div>
+        <div class="stat"><b id="rty-s-draw">–</b><span>dessin par image</span></div>
+      </div>
+      <p class="rty-note" id="rty-s-tick">Simulation à pas fixe : 60 ticks par seconde, quel que soit votre écran.</p>
+      <div class="rty-group">
+        <span>Le tableau du moteur, en direct. Une ligne = une entité. Une colonne = un type de composant. En bas : combien sont vivants.</span>
+        <canvas class="rty-table" id="rty-table" width="332" height="360" role="img" aria-label="Tableau ECS en direct : une ligne par entité, une colonne par type de composant, une case pleine quand l'entité possède ce composant."></canvas>
+      </div>
+      <p class="rty-note" id="rty-s-more"></p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Lancez la partie.</b> Cliquez sur « Jouer », bougez avec les flèches, tirez avec Espace. À droite, le tableau se remplit : chaque missile est une nouvelle ligne.</span></li>
+      <li><span><b>Essayez le tir chargé.</b> Tenez C une seconde, puis relâchez. Le gros missile traverse toute une file d'ennemis.</span></li>
+      <li><span><b>Allez voir le boss.</b> Choisissez « Niveau 3 · boss », puis « Bouclier » et « ×4 » pour y arriver vite. Seul son noyau orange prend des dégâts. Sa barre de vie change de couleur à chaque phase.</span></li>
+      <li><span><b>Changez les règles.</b> Passez en « hard », ou activez « Jeu à 70 % » et « Tir automatique ». Ce sont les options d'accessibilité du projet.</span></li>
+      <li><span><b>Modifiez un niveau.</b> Ouvrez « Modifier le niveau de départ », changez un <span class="mono">count</span> ou un <span class="mono">type</span>, puis « Jouer ce fichier ». Aucune ligne de code à toucher.</span></li>
+    </ol>
+    <p class="rty-team">Au niveau 2, un Bydos laisse tomber la Force (le bonus « F »). Elle arrête les missiles ennemis. X la lance, X la rappelle.</p>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>Le moteur range tout le jeu dans un grand tableau. C'est l'architecture ECS : entité, composant, système.</p>
+    <svg class="rty-schema" viewBox="0 0 460 190" role="img" aria-label="Schéma : un tableau. Chaque ligne est une entité, chaque colonne un composant. Un système est une règle qui parcourt les lignes qui ont les colonnes dont il a besoin.">
+      <g stroke="currentColor" stroke-width="1" fill="none">
+        <rect x="118" y="34" width="336" height="112"/>
+        <path d="M118 62h336M118 90h336M118 118h336M202 34v112M286 34v112M370 34v112"/>
+      </g>
+      <text class="h" x="130" y="52">Position</text><text class="h" x="214" y="52">Velocity</text><text class="h" x="298" y="52">Health</text><text class="h" x="382" y="52">Enemy</text>
+      <text x="4" y="80">0 · vaisseau</text><text x="4" y="108">1 · Bydos</text><text x="4" y="136">2 · missile</text>
+      <text x="130" y="80">100, 127</text><text x="214" y="80">0, 0</text><text x="298" y="80">1</text>
+      <text x="130" y="108">1280, 300</text><text x="298" y="108">1</text><text x="382" y="108">100 pts</text>
+      <text x="130" y="136">117, 140</text><text x="214" y="136">800, 0</text><text x="298" y="136">1</text>
+      <rect class="a" x="121" y="65" width="162" height="22" rx="3" stroke-width="1.4"/>
+      <rect class="a" x="121" y="121" width="162" height="22" rx="3" stroke-width="1.4"/>
+      <path class="a" stroke-width="1.4" d="M202 172v-22M197 156l5-6 5 6"/>
+      <text x="118" y="24">une colonne = un composant (des données)</text>
+      <text class="af" x="118" y="186">MovementSystem : toute ligne qui a Position et Velocity</text>
+    </svg>
+    <ol class="rty-list">
+      <li><b>Une entité est une ligne.</b> Juste un numéro. Quand elle meurt, son numéro est réutilisé.</li>
+      <li><b>Un composant est une colonne.</b> De simples données : une position, une vie, une arme. Il y en a 22 ici.</li>
+      <li><b>Un système est une règle.</b> Il passe sur chaque ligne qui a les colonnes dont il a besoin. Il demande « qu'as-tu ? », jamais « qui es-tu ? ».</li>
+      <li><b>Un tick, c'est 14 systèmes dans l'ordre.</b> Bouger, puis heurter, puis compter les morts. 60 fois par seconde, avec un pas de temps fixe.</li>
+      <li><b>Le contenu est dans des fichiers.</b> Les vagues sont en JSON. Un nouveau monstre peut s'écrire en Lua, sans recompiler.</li>
+    </ol>
+    <p>Le boss est une machine à états. Sa phase suit la vie de son noyau : au-dessus de 66 %, un éventail de 3 missiles ; entre 33 % et 66 %, 5 missiles visés ; en dessous, un anneau de 10 missiles et 2 kamikazes toutes les 5 secondes.</p>
+    <h3>Ce qui vient du projet, et ce qui change</h3>
+    <p>Repris tel quel : le modèle ECS, les 14 systèmes et leur ordre, toutes les valeurs (vitesses, vies, cadences, phases du boss, bonus), les trois niveaux, le fichier de règles, les options de difficulté et d'accessibilité. J'ai comparé cette version au vrai programme C++, tick par tick, sur toute la campagne : mêmes entités, mêmes positions, même score.</p>
+    <p>Ce qui change : le navigateur ne sait pas lire le Lua. J'ai donc traduit à la main les deux scripts de monstres en JavaScript, ligne par ligne. Les bonus lâchés « au hasard » n'utilisent pas le même générateur de nombres que le C++.</p>
+    <p>Ajouté pour le web : les dessins (formes tracées par moi, pas les images du projet), le fond étoilé, les commandes tactiles, le panneau « sous le capot », et le mode test : choix du niveau, vitesse ×2 et ×4, bouclier, hitbox, niveau modifiable. Le jeu en ligne à 4, le mode versus et le son ne sont pas ici.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Simuler beaucoup d'objets</h3><p>Une flotte de véhicules, des capteurs, des commandes en cours : des milliers d'objets qui changent d'état à chaque instant. Ranger les données en colonnes et les règles à part garde le code simple et rapide.</p></div>
+    <div><h3>Laisser le métier régler le produit</h3><p>Ici, un niveau est un fichier JSON et un monstre un petit script. Dans une entreprise, c'est une grille de prix ou une règle de calcul qu'on change sans redéployer le logiciel.</p></div>
+    <div><h3>Un serveur qui décide de tout</h3><p>La logique ne connaît ni l'écran ni le réseau. Elle peut tourner sur un serveur, dans un test automatique ou, comme ici, dans un navigateur. C'est le même principe qu'un moteur de règles métier.</p></div>
+    <div><h3>Ce que ce projet montre</h3><p>Du C++20 en équipe de quatre, une architecture pensée avant le code, environ 190 tests automatiques dans le dépôt, et une documentation pour que les autres puissent ajouter du contenu sans moi.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="data.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

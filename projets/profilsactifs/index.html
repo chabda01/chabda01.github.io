@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compétences+ — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Les trois espaces de Compétences+ (candidat, recruteur, admin) rejoués dans votre navigateur : badge de certification calculé en direct sur le vrai questionnaire, recherche recruteur, modération admin.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ─────
+   Trois couleurs réelles du projet (frontend/css/style.css : --or, --argent,
+   --bronze), gardées telles quelles : le grade d'un badge ne doit pas
+   dépendre d'une couleur inventée pour la démo. */
+.pa{ --or:#C8912B; --argent:#8C97A6; --bronze:#A86A3C; }
+
+.pa-bandeau{
+  font-size:.78rem; color:var(--stage-ink-2); background:rgba(233,168,85,.08);
+  border:1px solid var(--stage-line); border-radius:4px; padding:.55rem .8rem; margin-bottom:1rem;
+}
+.pa-select-compte{max-width:420px; margin-bottom:1.1rem}
+
+.pa-profil{display:flex; flex-direction:column; gap:1rem}
+.pa-profil__tete{display:flex; align-items:center; gap:.9rem; flex-wrap:wrap}
+.pa-avatar{
+  width:50px; height:50px; border-radius:50%; flex:none; display:flex;
+  align-items:center; justify-content:center; font-weight:700; font-size:.92rem;
+  background:var(--stage-2); color:var(--gold); box-shadow:inset 0 0 0 1px var(--stage-line);
+}
+.pa-nom{font-size:1.15rem; margin:0; color:var(--stage-ink)}
+.pa-lieu{font-size:.8rem; color:var(--stage-ink-3); margin:.1rem 0 0}
+
+.pa-badge-grand{
+  display:inline-flex; align-items:center; gap:10px; padding:.55rem .9rem;
+  border-radius:6px; background:#FFFFFF; color:#10161F; font-weight:700;
+  font-size:.9rem; border-left:6px solid var(--argent); align-self:flex-start;
+}
+.pa-badge-grand.or{border-left-color:var(--or)}
+.pa-badge-grand.argent{border-left-color:var(--argent)}
+.pa-badge-grand.bronze{border-left-color:var(--bronze)}
+.pa-badge-grand.absent{
+  background:transparent; color:var(--stage-ink-2); border:1px dashed var(--stage-line);
+  border-left-width:1px; font-weight:500;
+}
+.pa-rang{display:inline-flex; gap:4px}
+.pa-rang i{width:8px; height:8px; background:currentColor; border-radius:2px; display:block}
+.pa-badge-score{font-size:.72rem; font-weight:500; opacity:.8; margin-left:4px}
+
+.pa-video{
+  position:relative; width:220px; aspect-ratio:16/9; border-radius:6px; background:#050403;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.3rem;
+  color:var(--stage-ink-3); font-size:.74rem; text-align:center; padding:.6rem;
+  border:1px solid var(--stage-line); cursor:pointer; transition:color .2s,border-color .2s;
+}
+.pa-video:hover{color:var(--gold); border-color:var(--gold)}
+.pa-video.is-playing{color:var(--gold); border-color:var(--gold)}
+.pa-video__icone{font-size:1.5rem}
+.pa-video.is-vide{cursor:default}
+.pa-video.is-vide:hover{color:var(--stage-ink-3); border-color:var(--stage-line)}
+
+.pa-competences{display:flex; flex-wrap:wrap; gap:.4rem; list-style:none; margin:0; padding:0}
+.pa-competences li{
+  font-size:.74rem; padding:.25rem .6rem; border-radius:999px; color:var(--stage-ink-2);
+  background:rgba(255,255,255,.04); border:1px solid var(--stage-line);
+}
+
+.pa-notifs-titre{margin:0 0 .4rem; font-size:.8rem; color:var(--stage-ink-3)}
+.pa-notifs{
+  font-size:.8rem; color:var(--stage-ink-2); display:flex; flex-direction:column; gap:.35rem;
+  max-height:150px; overflow:auto; margin:0; padding:0; list-style:none;
+}
+.pa-notifs li{padding-bottom:.35rem; box-shadow:inset 0 -1px 0 var(--stage-line)}
+.pa-notifs .vide{color:var(--stage-ink-3)}
+
+.pa-quiz__barre{height:4px; background:var(--stage-line); border-radius:2px; overflow:hidden; margin:.8rem 0}
+.pa-quiz__barre i{display:block; height:100%; background:var(--gold); transition:width .2s}
+.pa-quiz__meta{font-size:.76rem; color:var(--stage-ink-3); display:flex; justify-content:space-between}
+.pa-quiz__options{list-style:none; margin:1rem 0; padding:0; display:flex; flex-direction:column; gap:.5rem}
+.pa-quiz__options label{
+  display:flex; align-items:flex-start; gap:.6rem; padding:.6rem .7rem; border-radius:5px;
+  border:1px solid var(--stage-line); cursor:pointer; font-size:.86rem; color:var(--stage-ink-2);
+  transition:border-color .2s,color .2s;
+}
+.pa-quiz__options label:hover{border-color:var(--gold)}
+.pa-quiz__options input:checked + span{color:var(--stage-ink)}
+.pa-quiz__options label:has(input:checked){border-color:var(--gold); background:rgba(233,168,85,.07)}
+.pa-quiz__lettre{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--stage-ink-3); flex:none}
+.pa-quiz__nav{display:flex; gap:.6rem; flex-wrap:wrap}
+.pa-quiz__resultat{display:flex; flex-direction:column; gap:.8rem; align-items:flex-start}
+.pa-quiz__score{font-family:"Instrument Serif",Georgia,serif; font-size:2.4rem; color:var(--stage-ink)}
+.pa-quiz__score span{font-size:1.1rem; color:var(--stage-ink-3)}
+
+.pa-filtres{display:flex; flex-wrap:wrap; gap:.8rem; align-items:flex-end; margin-bottom:.7rem}
+.pa-champ-large{flex:1 1 220px; min-width:0}
+.pa-case{display:flex; align-items:center; gap:.4rem; font-size:.8rem; color:var(--stage-ink-2); padding-bottom:.3rem}
+.pa-filtres-actions{display:flex; gap:.5rem; align-items:center}
+.pa-jetons{display:flex; flex-wrap:wrap; gap:.4rem; list-style:none; margin:0 0 .7rem; padding:0}
+.pa-jeton{
+  font-size:.72rem; display:inline-flex; align-items:center; gap:.35rem; color:var(--stage-ink-2);
+  background:rgba(255,255,255,.04); border:1px solid var(--stage-line); border-radius:999px;
+  padding:.2rem .4rem .2rem .6rem;
+}
+.pa-jeton button{background:none; border:0; color:var(--stage-ink-3); cursor:pointer; font-size:.9rem; line-height:1; padding:0 .2rem}
+.pa-jeton button:hover{color:var(--gold)}
+.pa-resume{font-size:.8rem; color:var(--stage-ink-3); margin:.3rem 0 .8rem}
+
+.pa-grille{display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:.7rem; list-style:none; margin:0 0 1rem; padding:0}
+.pa-carte{
+  background:rgba(255,255,255,.03); border:1px solid var(--stage-line); border-radius:6px;
+  padding:.65rem; display:flex; flex-direction:column; gap:.45rem; min-width:0;
+}
+.pa-carte__video{
+  aspect-ratio:16/9; border-radius:4px; background:#050403; display:flex; align-items:center;
+  justify-content:center; color:var(--stage-ink-3); font-weight:700; font-size:1rem; border:0;
+  width:100%; cursor:pointer; padding:0;
+}
+.pa-carte__video.is-vide{cursor:default; color:var(--stage-ink-3)}
+.pa-carte__nom{margin:0; font-size:.86rem; color:var(--stage-ink)}
+.pa-carte__lieu{margin:0; font-size:.68rem; color:var(--stage-ink-3)}
+.pa-pill{
+  display:inline-flex; align-items:center; gap:5px; font-size:.64rem; font-weight:700;
+  padding:.2rem .45rem; border-radius:4px; background:rgba(255,255,255,.92); color:#10161F;
+  border-left:3px solid var(--argent); align-self:flex-start; white-space:nowrap;
+}
+.pa-pill.or{border-left-color:var(--or)} .pa-pill.argent{border-left-color:var(--argent)} .pa-pill.bronze{border-left-color:var(--bronze)}
+.pa-pill.absent{background:transparent; color:var(--stage-ink-3); border:1px dashed var(--stage-line)}
+.pa-carte__lien{font-size:.74rem; color:var(--gold); text-decoration:none; margin-top:auto}
+.pa-carte__lien:hover{text-decoration:underline}
+
+.pa-pagination{display:flex; align-items:center; gap:.8rem; font-size:.78rem; color:var(--stage-ink-2); flex-wrap:wrap}
+
+.pa-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:.6rem; margin-bottom:1.3rem}
+.pa-bloc{margin-bottom:1.3rem}
+.pa-bloc-tete{display:flex; justify-content:space-between; align-items:baseline; gap:.6rem; margin-bottom:.55rem; flex-wrap:wrap}
+.pa-bloc-tete h3{margin:0; font-size:.88rem; color:var(--stage-ink)}
+.pa-file{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.6rem}
+.pa-vide-file{color:var(--stage-ink-3); font-size:.82rem; padding:.4rem 0}
+.pa-moderation{
+  background:rgba(255,255,255,.03); border:1px solid var(--stage-line); border-radius:6px;
+  padding:.65rem .7rem; display:flex; flex-direction:column; gap:.4rem; font-size:.84rem;
+}
+.pa-moderation__tete{display:flex; justify-content:space-between; gap:.6rem; flex-wrap:wrap}
+.pa-moderation__nom{font-weight:600; color:var(--stage-ink)}
+.pa-moderation__meta{color:var(--stage-ink-3); font-size:.76rem; margin:0}
+.pa-moderation input[type="text"]{
+  font:inherit; font-size:.82rem; color:var(--stage-ink); background:#0F0D0A;
+  border:1px solid var(--stage-line); border-radius:4px; padding:.4rem .55rem; width:100%;
+}
+.pa-moderation input[aria-invalid="true"]{border-color:var(--bad)}
+.pa-moderation__actions{display:flex; gap:.5rem; flex-wrap:wrap}
+.pa-moderation__actions .btn{padding:.4rem .8rem; font-size:.78rem}
+
+dialog.pa-fiche{
+  border:0; border-radius:8px; padding:0; max-width:420px; width:min(92vw,420px);
+  background:var(--stage); color:var(--stage-ink); box-shadow:var(--shade);
+}
+dialog.pa-fiche::backdrop{background:rgba(0,0,0,.65)}
+.pa-fiche__corps{padding:1.3rem; position:relative; display:flex; flex-direction:column; gap:.9rem}
+.pa-fiche__fermer{
+  position:absolute; top:.6rem; right:.6rem; background:none; border:0; color:var(--stage-ink-3);
+  font-size:1.1rem; cursor:pointer; line-height:1; padding:.3rem;
+}
+.pa-fiche__fermer:hover{color:var(--gold)}
+.pa-fiche__dossier{font-size:.72rem; color:var(--stage-ink-3)}
+.pa-fiche__actions{display:flex; gap:.6rem; flex-wrap:wrap}
+.pa-fiche__message{font-size:.78rem; color:var(--ok)}
+
+.pa-comptes{list-style:none; margin:0 0 .4rem; padding:0; font-size:.76rem; color:var(--stage-ink-2); display:flex; flex-direction:column; gap:.3rem}
+.pa-comptes li{display:flex; justify-content:space-between; gap:.6rem; box-shadow:inset 0 -1px 0 var(--stage-line); padding-bottom:.3rem}
+.pa-comptes b{color:var(--stage-ink); font-weight:600}
+.pa-comptes span{color:var(--stage-ink-3); white-space:nowrap}
+
+.pa-schema{display:block; width:100%; height:auto; max-width:460px; margin:1.1rem 0 .4rem}
+.pa-schema text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:11px; fill:var(--ink-2)}
+
+@media (max-width:480px){
+  .pa-video{width:100%; max-width:260px}
+  .pa-select-compte{max-width:100%}
+}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-SVR-500 · survivor</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Web et produit</span>
+  <h1>Compétences+</h1>
+  <p class="demo-hero__lede">Une plateforme qui remplace le CV classique par une courte vidéo de présentation et un badge de certification (Bronze, Argent, Or), obtenu après un questionnaire d'aptitudes transversales. Trois espaces : candidat, recruteur, admin.</p>
+  <p class="demo-origin">Le projet s'est appelé <strong>ProfilsActifs</strong> jusqu'au 9 septembre 2026 ; sur décision du cabinet client, il s'appelle depuis <strong>Compétences+</strong>, partout et sans variante — j'ai gardé ce nouveau nom ici. Le frontend d'origine est déjà écrit en HTML/CSS/JS natif, sans aucune dépendance : cette page en reprend l'essentiel tel quel (mêmes règles, mêmes comptes de test). Le vrai backend (Node/Express/Prisma/MySQL) n'est pas branché ici : je l'ai remplacé par un petit module JavaScript qui simule les mêmes réponses en mémoire, avec des profils candidats <strong>fictifs</strong>, inventés pour cette page.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage pa" id="pa-stage">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <div class="chips" role="tablist" aria-label="Espace à afficher">
+          <button class="chip is-on" type="button" id="pa-role-candidat" role="tab" aria-selected="true">Espace candidat</button>
+          <button class="chip" type="button" id="pa-role-recruteur" role="tab" aria-selected="false">Espace recruteur</button>
+          <button class="chip" type="button" id="pa-role-admin" role="tab" aria-selected="false">Espace admin</button>
+        </div>
+        <span class="stage__status" role="status" id="pa-status">—</span>
+      </div>
+
+      <!-- ====================================================== CANDIDAT == -->
+      <div id="pa-vue-candidat">
+        <p class="pa-bandeau">Aucune donnée de ce service n'est utilisée pour déterminer vos droits ni le montant de vos allocations. <span class="mono" style="opacity:.7">— bandeau réel, affiché sur tous les écrans candidat du vrai produit</span></p>
+
+        <label class="field pa-select-compte">Se connecter comme (compte de test réel du dépôt)
+          <select id="pa-candidat-select"></select>
+        </label>
+
+        <div class="pa-profil" id="pa-profil-carte"></div>
+
+        <div class="pa-quiz" id="pa-quiz" hidden></div>
+      </div>
+
+      <!-- ===================================================== RECRUTEUR == -->
+      <div id="pa-vue-recruteur" hidden>
+        <form class="pa-filtres" id="pa-filtres" role="search" autocomplete="off">
+          <label class="field pa-champ-large">Recherche
+            <input type="search" id="pa-f-q" placeholder="Nom, métier, compétence…">
+          </label>
+          <label class="field">Compétence
+            <input type="text" id="pa-f-competence" placeholder="SEO, JavaScript…">
+          </label>
+          <label class="field">Secteur
+            <input type="text" id="pa-f-secteur" list="pa-secteurs" placeholder="Communication, Informatique…">
+          </label>
+          <label class="field">Ville
+            <input type="text" id="pa-f-ville" list="pa-villes" placeholder="Cotonou, Porto-Novo…">
+          </label>
+          <datalist id="pa-secteurs"></datalist>
+          <datalist id="pa-villes"></datalist>
+          <label class="pa-case"><input type="checkbox" id="pa-f-badge"> Titulaires du badge seulement</label>
+          <div class="pa-filtres-actions">
+            <button class="btn" type="submit">Rechercher</button>
+            <button class="btn btn--ghost" type="button" id="pa-f-effacer">Tout effacer</button>
+          </div>
+        </form>
+
+        <ul class="pa-jetons" id="pa-jetons" aria-label="Filtres actifs"></ul>
+        <p class="pa-resume" id="pa-resume" role="status"></p>
+        <ul class="pa-grille" id="pa-grille"></ul>
+        <nav class="pa-pagination" id="pa-pagination" aria-label="Pages de résultats"></nav>
+      </div>
+
+      <!-- ========================================================= ADMIN == -->
+      <div id="pa-vue-admin" hidden>
+        <dl class="stats pa-stats" id="pa-stats"></dl>
+
+        <section class="pa-bloc" aria-labelledby="pa-titre-profils">
+          <div class="pa-bloc-tete">
+            <h3 id="pa-titre-profils">Profils à modérer</h3>
+            <span role="status" id="pa-compte-profils"></span>
+          </div>
+          <ul class="pa-file" id="pa-file-profils"></ul>
+        </section>
+
+        <section class="pa-bloc" aria-labelledby="pa-titre-videos">
+          <div class="pa-bloc-tete">
+            <h3 id="pa-titre-videos">Vidéos à modérer</h3>
+            <span role="status" id="pa-compte-videos"></span>
+          </div>
+          <ul class="pa-file" id="pa-file-videos"></ul>
+        </section>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <span class="label">Comptes de test (README §7 du dépôt)</span>
+      <ul class="pa-comptes" id="pa-liste-comptes"></ul>
+      <p style="font-size:.74rem; color:var(--stage-ink-3); margin:0">Mot de passe commun : <code class="mono">motdepasse123</code>. Aucune vraie authentification ici — c'est juste pour choisir un rôle.</p>
+
+      <span class="label" style="margin-top:.6rem">Réel / inventé</span>
+      <p style="font-size:.76rem; color:var(--stage-ink-2); margin:0">5 profils candidats viennent du vrai jeu de test du dépôt (<code class="mono">backend/prisma/seed.js</code>). Les autres sont inventés pour cette démo — noms fictifs, personne réelle derrière.</p>
+
+      <button class="btn btn--ghost" type="button" id="pa-reset" style="margin-top:.6rem">Réinitialiser la démo</button>
+    </div>
+  </div>
+</section>
+
+<!-- La fiche publique d'un profil, ouverte depuis l'espace recruteur — comme
+     html/profil.html, qui est elle aussi consultable sans compte. -->
+<dialog class="pa-fiche" id="pa-fiche" aria-label="Fiche publique d'un profil">
+  <div class="pa-fiche__corps" id="pa-fiche-corps"></div>
+</dialog>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Passez le questionnaire.</b> Dans l'espace candidat, choisissez « Jean K. » (aucun badge pour l'instant) et cliquez sur « Passer le questionnaire de certification ». Les 20 questions sont les vraies, reprises de <span class="mono">certification/questions.v1.json</span>.</span></li>
+      <li><span><b>Regardez le badge apparaître.</b> Le score se calcule avec la même formule que le serveur réel ; le badge (Bronze, Argent ou Or) suit directement le barème du vrai projet.</span></li>
+      <li><span><b>Cherchez un profil côté recruteur.</b> Filtrez par secteur, ville ou badge, puis ouvrez une fiche et cliquez sur « Contacter » ou « Mettre en favori ».</span></li>
+      <li><span><b>Revenez côté candidat.</b> Une notification de cette interaction est arrivée sur le profil que vous venez de contacter — c'est une règle du vrai produit.</span></li>
+      <li><span><b>Modérez, côté admin.</b> « Romuald Dossou » attend d'être validé, et une vidéo attend aussi sa modération : une fois validés, ils deviennent visibles côté recruteur — pas avant.</span></li>
+    </ol>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>Le score ne se devine pas : chaque option d'une question vaut 0, 1 ou 2 points. Le score final est le rapport entre les points obtenus et le maximum possible, ramené sur 100.</p>
+    <svg class="pa-schema" viewBox="0 0 400 130" role="img" aria-label="Schéma : le score sur 100 est découpé en trois bandes de badge — Bronze de 0 à 49, Argent de 50 à 79, Or de 80 à 100.">
+      <text x="20" y="18">points obtenus ÷ points maximum × 100 = score</text>
+      <rect x="20" y="34" width="176" height="28" fill="var(--bronze,#A86A3C)" opacity=".85"/>
+      <rect x="196" y="34" width="108" height="28" fill="var(--argent,#8C97A6)" opacity=".85"/>
+      <rect x="304" y="34" width="76" height="28" fill="var(--or,#C8912B)" opacity=".85"/>
+      <text x="108" y="53" text-anchor="middle" fill="#10161F" font-weight="700">Bronze</text>
+      <text x="250" y="53" text-anchor="middle" fill="#10161F" font-weight="700">Argent</text>
+      <text x="342" y="53" text-anchor="middle" fill="#10161F" font-weight="700">Or</text>
+      <text x="20" y="78">0</text>
+      <text x="188" y="78" text-anchor="middle">49 · 50</text>
+      <text x="296" y="78" text-anchor="middle">79 · 80</text>
+      <text x="372" y="78" text-anchor="end">100</text>
+      <line x1="20" y1="90" x2="380" y2="90" stroke="currentColor" stroke-width="1" opacity=".4"/>
+      <text x="20" y="108">Finir le questionnaire donne toujours au moins le Bronze.</text>
+      <text x="20" y="122">« Sans badge » veut dire : le questionnaire n'a pas encore été passé.</text>
+    </svg>
+    <h3>Ce qui change par rapport au vrai site</h3>
+    <p>Le vrai frontend parle à une API Node/Express qui lit et écrit dans une base MySQL via Prisma ; ici, un module JavaScript en mémoire (<span class="mono">core.js</span> + <span class="mono">donnees.js</span>) tient ce rôle, sans aucun serveur. Toutes les règles reproduites viennent du code source du dépôt : le calcul du score et les seuils de badge (<span class="mono">questionnaire.service.js</span>, <span class="mono">seed.js</span>), le filtre recruteur (<span class="mono">profil.service.js</span>, <span class="mono">recruteur.js</span>), et le fonctionnement de la modération (<span class="mono">admin-moderation.js</span>). Ce qui manque : la vraie vidéo (zone factice, aucun fichier hébergé), l'inscription, et tout ce qui touche à un vrai compte.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Recrutement sans CV</h3><p>Évaluer une aptitude transversale avec la même grille pour tout le monde, plutôt que de comparer des CV écrits très différemment.</p></div>
+    <div><h3>Modération avant publication</h3><p>Un profil ou une vidéo n'est visible qu'après validation : utile pour tout catalogue public qui accepte du contenu déposé par des usagers.</p></div>
+    <div><h3>Notifier sans exposer de chiffre public</h3><p>Le candidat sait qu'un recruteur l'a contacté ou mis en favori, mais ce compteur reste privé — aucun classement par popularité n'est possible.</p></div>
+    <div><h3>Ce que ce projet montre</h3><p>Un frontend statique sans dépendance branché sur une vraie API REST, des règles métier qui viennent du cabinet client, et un travail d'équipe (répartition front/back, revue technique, changement de nom à deux jours de l'échéance).</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="donnees.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

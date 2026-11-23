@@ -1,0 +1,13 @@
+{
+    "name": "Level 1 - Bydos Patrol",
+    "waves": [
+        { "time": 1.5, "type": "bydos", "count": 1, "y": 100, "pattern": "linear" },
+        { "time": 4.0, "type": "bydos", "count": 1, "y": 500, "pattern": "sine" },
+        { "time": 7.0, "type": "bydos", "count": 3, "y": 120, "pattern": "linear" },
+        { "time": 9.5, "type": "bydos", "count": 1, "y": 360, "pattern": "linear", "drop": "speed" },
+        { "time": 11.0, "type": "bydos", "count": 2, "y": 300, "pattern": "sine" },
+        { "time": 15.0, "type": "bydos", "count": 4, "y": 100, "pattern": "linear" },
+        { "time": 17.5, "type": "bydos", "count": 1, "y": 200, "pattern": "sine", "drop": "rapidfire" },
+        { "time": 20.0, "type": "bydos", "count": 3, "y": 250, "pattern": "sine" }
+    ]
+}

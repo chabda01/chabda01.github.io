@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>my_torch — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Un réseau de neurones écrit de zéro en C++ qui dit si un échiquier est en échec ou mat. Déplacez les pièces : le vrai réseau répond dans votre navigateur.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage.mt{grid-template-columns:minmax(0,1fr) minmax(0,380px)}
+@media (max-width:940px){
+  .stage.mt{grid-template-columns:minmax(0,1fr)}
+  .stage.mt .stage__side{box-shadow:inset 0 1px 0 var(--stage-line)}
+}
+.mt{--sq-l:#DCCDB0; --sq-d:#9A7B55; --mt-w:#6FB6C9; --mt-b:#C58BD6}
+.mt-group{display:flex; flex-direction:column; gap:.45rem; margin-bottom:1rem}
+.mt-group > span{font-size:.72rem; color:var(--stage-ink-3); letter-spacing:.04em}
+
+/* échiquier */
+.mt-boardwrap{max-width:520px; margin-inline:auto}
+.mt-board{
+  display:grid; grid-template-columns:repeat(8,1fr); aspect-ratio:1; border-radius:3px; overflow:hidden;
+  box-shadow:0 0 0 1px var(--stage-line),0 14px 30px -18px #000; user-select:none; -webkit-user-select:none;
+}
+.mt-sq{
+  position:relative; padding:0; margin:0; border:0; border-radius:0; font:inherit; cursor:pointer;
+  background:var(--sq-l); aspect-ratio:1; min-width:0; touch-action:pan-y; -webkit-tap-highlight-color:transparent;
+}
+.mt-sq.is-dark{background:var(--sq-d)}
+.mt-sq.has-piece{touch-action:none; cursor:grab}
+.mt-sq:focus-visible{outline:2px solid var(--gold); outline-offset:-2px; z-index:2}
+.mt-sq svg{position:absolute; inset:6%; width:88%; height:88%; pointer-events:none}
+.mt-sq.is-lifted svg{opacity:.25}
+.mt-sq.is-sel{box-shadow:inset 0 0 0 3px var(--gold)}
+.mt-sq.is-target{box-shadow:inset 0 0 0 3px rgba(233,168,85,.75)}
+.mt-coord{position:absolute; font-size:.56rem; line-height:1; color:rgba(26,22,17,.62); pointer-events:none; font-family:"JetBrains Mono",ui-monospace,monospace}
+.mt-coord--r{top:2px; left:3px}
+.mt-coord--f{bottom:2px; right:3px}
+.pw{fill:#FBF6EA; stroke:#1A1611; stroke-width:1.5; stroke-linejoin:round}
+.pb{fill:#1E1913; stroke:#F3EDE2; stroke-width:1.1; stroke-linejoin:round}
+/* ce que l'encodage calcule, posé sur les cases */
+.mt-sq::before,.mt-sq::after{content:""; position:absolute; pointer-events:none}
+.mt-sq.o-line::before{inset:0; background:rgba(224,119,95,.62)}
+.mt-sq.o-esc::after{left:36%; top:36%; width:28%; height:28%; border-radius:50%; background:#2E8B57; box-shadow:0 0 0 2px rgba(255,255,255,.75)}
+.mt-sq.o-king::before{inset:0; box-shadow:inset 0 0 0 4px #D2452D; background:rgba(224,119,95,.35)}
+.mt-sq.o-cw::before{inset:0; background:rgba(60,150,180,.5)}
+.mt-sq.o-cb::before{inset:0; background:rgba(150,80,175,.48)}
+.mt-legend{display:flex; flex-wrap:wrap; gap:.4rem 1rem; margin:.7rem 0 0; font-size:.76rem; color:var(--stage-ink-2); min-height:1.3rem}
+.mt-legend i{display:inline-block; width:.8rem; height:.8rem; border-radius:2px; vertical-align:-.1rem; margin-right:.35rem}
+.stage .mt-quick{margin:.7rem 0 0; font-size:.86rem; color:var(--stage-ink-2)}
+.mt-quick b{font-weight:400; color:var(--gold); font-size:.84rem}
+.mt-ghost{position:fixed; left:0; top:0; z-index:50; pointer-events:none; will-change:transform; filter:drop-shadow(0 6px 8px rgba(0,0,0,.5))}
+.mt-ghost svg{width:100%; height:100%; display:block}
+
+/* réserve de pièces */
+.mt-tray{display:grid; grid-template-columns:repeat(13,minmax(0,1fr)); gap:3px; margin-top:.9rem}
+.mt-tray button{
+  position:relative; aspect-ratio:1; padding:0; border-radius:3px; cursor:pointer; touch-action:none;
+  background:rgba(255,255,255,.06); border:1px solid var(--stage-line); color:var(--stage-ink-2); font:inherit; font-size:.9rem;
+}
+.mt-tray button svg{position:absolute; inset:4%; width:92%; height:92%; pointer-events:none}
+.mt-tray button[aria-pressed="true"]{border-color:var(--gold); background:rgba(233,168,85,.2)}
+.mt-tray button:focus-visible{outline:2px solid var(--gold); outline-offset:1px}
+.mt-tray .mt-b{background:rgba(240,234,224,.2)}
+@media (max-width:520px){ .mt-tray{grid-template-columns:repeat(7,minmax(0,1fr))} .mt-tray .mt-erase{grid-row:1; grid-column:7} }
+.mt-hint{margin:.6rem 0 0; font-size:.8rem !important; color:var(--stage-ink-3) !important}
+.mt-row{display:flex; flex-wrap:wrap; gap:.5rem; align-items:center; margin-top:1rem}
+.mt-row > span{font-size:.8rem; color:var(--stage-ink-2); margin-right:.2rem}
+.mt-fen{margin-top:1rem}
+.mt-fen input{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.76rem}
+.mt-fenrow{display:flex; gap:.5rem; align-items:stretch}
+.mt-fenrow input{flex:1; min-width:0}
+.mt-err{margin-top:.6rem}
+.mt-err[hidden]{display:none}
+
+/* réponse */
+.stage .mt-verdict{font-family:"Instrument Serif",Georgia,serif; font-size:clamp(1.9rem,4vw,2.4rem); line-height:1.05; color:var(--stage-ink); margin:0}
+.mt-gloss{font-size:.9rem !important; margin:.3rem 0 0}
+.mt-exp{font-size:.8rem !important; margin:.35rem 0 0}
+.mt-exp .ok{color:var(--ok)} .mt-exp .bad{color:var(--bad)}
+.mt-term{font-size:.72rem}
+.mt-probs{display:flex; flex-direction:column; gap:.4rem}
+.mt-prob{display:grid; grid-template-columns:8.6rem 1fr 3.6rem; gap:.5rem; align-items:center; font-size:.76rem; color:var(--stage-ink-2)}
+.mt-prob .mono{font-size:.72rem}
+.mt-prob b{font-weight:400; text-align:right; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.72rem; color:var(--stage-ink)}
+.mt-prob .bar{height:.55rem; background:rgba(255,255,255,.07); border-radius:2px; overflow:hidden}
+.mt-prob .bar i{display:block; height:100%; width:100%; background:var(--stage-ink-3); transform-origin:left center; transform:scaleX(0); transition:transform .25s}
+.mt-prob.is-on{color:var(--stage-ink)}
+.mt-prob.is-on .bar i{background:var(--gold)}
+@media (prefers-reduced-motion:reduce){ .mt-prob .bar i{transition:none} }
+.mt-layer{display:flex; flex-direction:column; gap:.3rem}
+.mt-layer > span{display:flex; justify-content:space-between; gap:.6rem; font-size:.72rem; color:var(--stage-ink-3)}
+.mt-layer > span b{font-weight:400; color:var(--stage-ink-2)}
+.mt-layer canvas{width:100%; border-radius:2px}
+.mt-layers{display:flex; flex-direction:column; gap:.75rem}
+.mt-key{font-size:.72rem !important; color:var(--stage-ink-3) !important; margin:0}
+.mt-key i{display:inline-block; width:.6rem; height:.6rem; border-radius:1px; margin:0 .3rem 0 .1rem}
+
+/* résultats mesurés */
+.mt-results{grid-column:1/-1; padding:clamp(1rem,2.4vw,1.6rem); box-shadow:inset 0 1px 0 var(--stage-line); min-width:0}
+.mt-results .stats{margin:.9rem 0 1rem}
+.mt-results p{max-width:78ch}
+.mt-tables{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1.2rem 2.4rem; margin-top:1rem}
+.mt-tables h3{margin-bottom:.4rem}
+.mt-scroll{overflow-x:auto}
+.mt-results .dtable td,.mt-results .dtable th{padding:.4rem .5rem}
+.mt-results .dtable .num{text-align:right; font-variant-numeric:tabular-nums}
+.mt-results .dtable td.hit{color:var(--stage-ink)}
+.mt-results .dtable td.miss{color:var(--bad)}
+.mt-src{font-size:.76rem !important; color:var(--stage-ink-3) !important; margin-top:.9rem}
+
+/* sous la scène */
+.mt-schema{display:block; width:100%; height:auto; max-width:470px; margin:1.2rem 0 .8rem; color:var(--ink-2)}
+.mt-schema text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:11.5px; fill:var(--ink-2)}
+.mt-schema .t{fill:var(--ink); font-weight:600}
+.mt-schema .box{fill:none; stroke:currentColor; stroke-width:1}
+.mt-schema .a{stroke:var(--accent); fill:none; stroke-width:1.3}
+.mt-schema .af{fill:var(--accent)}
+.mt-list{margin:0 0 1rem; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.mt-list li{margin-bottom:.45em}
+.demo-cols h3{font-size:1rem; margin:1.4rem 0 .5rem}
+</style>
+</head>
+<body class="demo">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="pc-p" viewBox="0 0 45 45"><path d="M22.5 8.5a5.2 5.2 0 0 1 3.300 9.200c2.700 1.500 4.400 4.300 4.400 7.600 0 1.700-.5 3.200-1.300 4.500 3 1.400 4.900 3.700 4.900 6.700v2H11.200v-2c0-3 1.900-5.300 4.900-6.700-.8-1.300-1.300-2.800-1.300-4.500 0-3.300 1.700-6.100 4.400-7.600A5.200 5.200 0 0 1 22.500 8.500z"/></symbol>
+    <symbol id="pc-r" viewBox="0 0 45 45"><path d="M10.500 38.500h24v-3.500h-24zM13.500 35l1.800-4h14.400l1.800 4zM15.300 31l1.200-13h12l1.200 13zM13 18l-1-10h4.200v3.200h4V8h4.600v3.200h4V8H33l-1 10z"/></symbol>
+    <symbol id="pc-n" viewBox="0 0 45 45"><path d="M11 38.500h24v-3.500H11zM13.500 35c-.4-5 1.600-8.300 5.200-11.200 1.900-1.500 2.700-3.300 2.300-5.300-1.500 2.200-3.700 3.600-6 4.300l-2.300 2.700-3.500-2.200c.4-3 1.800-5.200 3.800-7.600 1.100-3.300 3.200-5.600 6.200-6.700l-.4-3.500 3.700 2.700c7.300 1.500 10.800 9.400 10 26.800z"/><circle cx="18.200" cy="14.800" r="1.100"/></symbol>
+    <symbol id="pc-b" viewBox="0 0 45 45"><path d="M11 38.500h23v-3.500H11zM14.500 35c0-2.700 1.600-4.600 3.800-5.700-2.600-1.900-4-4.700-4-7.800 0-4.200 3.200-8 8.200-12 5 4 8.200 7.800 8.200 12 0 3.100-1.400 5.900-4 7.800 2.200 1.100 3.800 3 3.800 5.700z"/><circle cx="22.500" cy="6.800" r="2.300"/><path d="M22.500 15.500v8M19 19.500h7" fill="none"/></symbol>
+    <symbol id="pc-q" viewBox="0 0 45 45"><path d="M11 38.500h23v-3.500H11zM13.500 35L9.800 15.500l6.700 9 2-14 4 13.500 4-13.500 2 14 6.700-9L31.500 35z"/><circle cx="9.300" cy="13.300" r="2.200"/><circle cx="18.300" cy="8.500" r="2.200"/><circle cx="26.700" cy="8.500" r="2.200"/><circle cx="35.700" cy="13.300" r="2.200"/></symbol>
+    <symbol id="pc-k" viewBox="0 0 45 45"><path d="M11 38.500h23v-3.500H11zM13.500 35c-3.400-5.300-5-9.400-3.200-12.700 2-3.600 7.200-3.500 10.500.4V14.500h-3.500v-3.300h3.500V7h3.400v4.200h3.500v3.300h-3.500v8.200c3.300-3.900 8.500-4 10.500-.4 1.800 3.300.2 7.400-3.200 12.700z"/></symbol>
+  </defs>
+</svg>
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-CNA-501 · mytorch</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Intelligence artificielle et données</span>
+  <h1>my_torch</h1>
+  <p class="demo-hero__lede">Un réseau de neurones écrit de zéro, sans aucune bibliothèque d'IA. Il regarde un échiquier et répond : rien à signaler, échec, ou échec et mat, et pour quelle couleur.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en C++17, à deux. Cette page en est une version web : j'ai réécrit en JavaScript l'encodage du plateau et le calcul du réseau. Les poids sont ceux du réseau livré avec le projet, sans réentraînement.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage mt">
+    <div class="stage__main">
+      <div class="mt-group">
+        <span>Positions tirées du projet (fichier d'exemple et jeu de test)</span>
+        <div class="chips" id="mt-presets"></div>
+      </div>
+
+      <div class="mt-boardwrap">
+        <div class="mt-board" id="mt-board" role="group" aria-label="Échiquier : glissez une pièce pour la déplacer"></div>
+        <p class="mt-quick" aria-hidden="true">Réponse du réseau : <b class="mono" id="mt-quick">…</b></p>
+        <div class="mt-legend" id="mt-legend"></div>
+        <div class="mt-tray" id="mt-tray" role="group" aria-label="Réserve de pièces"></div>
+        <p class="mt-hint">Glissez une pièce, ou touchez-la puis touchez une case. Sortez-la du plateau pour l'enlever. Aucune règle n'est vérifiée, comme dans le programme : tous les coups sont permis.</p>
+      </div>
+
+      <div class="mt-row">
+        <span>Ce que l'encodage calcule</span>
+        <div class="chips" id="mt-overlay">
+          <button class="chip" type="button" data-o="line" aria-pressed="true">Ligne d'attaque et fuites</button>
+          <button class="chip" type="button" data-o="cw" aria-pressed="false">Cases tenues par les blancs</button>
+          <button class="chip" type="button" data-o="cb" aria-pressed="false">Cases tenues par les noirs</button>
+          <button class="chip" type="button" data-o="none" aria-pressed="false">Rien</button>
+        </div>
+      </div>
+      <div class="mt-row">
+        <span>Trait</span>
+        <div class="chips" id="mt-turn">
+          <button class="chip" type="button" data-t="w" aria-pressed="true">Aux blancs de jouer</button>
+          <button class="chip" type="button" data-t="b" aria-pressed="false">Aux noirs de jouer</button>
+        </div>
+      </div>
+
+      <label class="field mt-fen">Le plateau en notation FEN (collez la vôtre, puis Entrée)
+        <span class="mt-fenrow">
+          <input id="mt-fen" type="text" spellcheck="false" autocomplete="off" autocapitalize="off">
+          <button class="btn" type="button" id="mt-go">Analyser</button>
+        </span>
+      </label>
+      <div class="term mt-err" id="mt-err" role="alert" hidden></div>
+    </div>
+
+    <div class="stage__side">
+      <span class="label">Réponse du réseau</span>
+      <div>
+        <p class="mt-verdict" id="mt-verdict">…</p>
+        <p class="mt-gloss" id="mt-gloss">Chargement du réseau (1,2 Mo)…</p>
+        <p class="mt-exp" id="mt-exp" hidden></p>
+      </div>
+      <div class="term mt-term" id="mt-term" aria-live="polite"></div>
+      <div class="mt-probs" id="mt-probs" aria-label="Probabilité de chaque réponse"></div>
+
+      <span class="label">Activité des couches</span>
+      <div class="mt-layers">
+        <div class="mt-layer"><span>Entrée : 1050 nombres <b id="mt-n0">–</b></span><canvas id="mt-c0" height="60"></canvas></div>
+        <p class="mt-key"><i style="background:#E9A855"></i>placement des pièces (774) <i style="background:#7FB77E"></i>géométrie (276)</p>
+        <div class="mt-layer"><span>Couche 1 : 256 neurones <b id="mt-n1">–</b></span><canvas id="mt-c1" height="40"></canvas></div>
+        <div class="mt-layer"><span>Couche 2 : 128 neurones <b id="mt-n2">–</b></span><canvas id="mt-c2" height="24"></canvas></div>
+      </div>
+      <span class="stage__status" role="status" id="mt-status" style="margin-left:0">Chargement…</span>
+    </div>
+
+    <div class="mt-results">
+      <span class="label">Résultats mesurés dans le projet</span>
+      <div class="stats">
+        <div class="stat"><b>97,29 %</b><span>jeu de test : 19 460 / 20 003</span></div>
+        <div class="stat"><b>97,34 %</b><span>second jeu indépendant : 38 941 / 40 005</span></div>
+        <div class="stat"><b>20 %</b><span>référence au hasard (5 classes)</span></div>
+        <div class="stat"><b>302 597</b><span>poids dans le réseau livré</span></div>
+      </div>
+      <p>Ces plateaux n'ont pas servi à l'entraînement. Le réseau ne se trompe presque jamais sur « rien » ni sur la couleur. Ses 543 erreurs sur le jeu de test sont presque toutes entre échec et mat.</p>
+      <div class="mt-tables">
+        <div>
+          <h3>Ce que l'encodage a changé</h3>
+          <div class="mt-scroll">
+          <table class="dtable">
+            <tr><th>Entrée du réseau</th><th class="num">Nombres</th><th class="num">Test</th></tr>
+            <tr><td>Placement des pièces seul</td><td class="num">774</td><td class="num">84,82 %</td></tr>
+            <tr><td>+ cases contrôlées, replis du roi</td><td class="num">922</td><td class="num">96,71 %</td></tr>
+            <tr class="is-on"><td>+ lignes d'attaque (réseau livré)</td><td class="num">1050</td><td class="num">97,29 %</td></tr>
+          </table>
+          </div>
+          <p class="mt-src">Même réseau (256-128), mêmes données : seule l'entrée change.</p>
+        </div>
+        <div>
+          <h3>Matrice de confusion, jeu de test</h3>
+          <div class="mt-scroll">
+          <table class="dtable">
+            <tr><th>Vrai \ prédit</th><th class="num">Rien</th><th class="num">Éch. B</th><th class="num">Éch. N</th><th class="num">Mat B</th><th class="num">Mat N</th></tr>
+            <tr><td>Nothing</td><td class="num hit">4028</td><td class="num">0</td><td class="num">0</td><td class="num">0</td><td class="num">0</td></tr>
+            <tr><td>Check White</td><td class="num miss">1</td><td class="num hit">3766</td><td class="num">0</td><td class="num miss">242</td><td class="num">0</td></tr>
+            <tr><td>Check Black</td><td class="num">0</td><td class="num">0</td><td class="num hit">3797</td><td class="num">0</td><td class="num miss">188</td></tr>
+            <tr><td>Checkmate White</td><td class="num">0</td><td class="num miss">17</td><td class="num">0</td><td class="num hit">3958</td><td class="num">0</td></tr>
+            <tr><td>Checkmate Black</td><td class="num">0</td><td class="num">0</td><td class="num miss">95</td><td class="num">0</td><td class="num hit">3911</td></tr>
+          </table>
+          </div>
+        </div>
+      </div>
+      <p class="mt-src">Source : docs/benchmarks.md et docs/benchmarks/confusion_matrix_geometry.txt, dans le dépôt du projet. Chiffres copiés tels quels. Vérification de cette page : sur les 60 008 plateaux de ces deux jeux, le JavaScript donne la même réponse que le programme C++ dans 100 % des cas (mesuré avec node).</p>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Choisissez une position.</b> Cliquez sur « Mat des blancs ». Le réseau répond <span class="mono">Checkmate White</span>, comme le programme.</span></li>
+      <li><span><b>Regardez ce que voit le réseau.</b> En rouge : la pièce qui vise le roi et la ligne entre eux. En vert : les cases où le roi peut fuir. Les autres boutons montrent les cases tenues par chaque camp.</span></li>
+      <li><span><b>Sauvez le roi.</b> Glissez une pièce sur la ligne rouge, ou enlevez la pièce qui attaque. La réponse et les probabilités changent pendant le geste.</span></li>
+      <li><span><b>Construisez votre position.</b> Prenez des pièces dans la réserve, changez le trait, ou collez une notation FEN.</span></li>
+      <li><span><b>Voyez une erreur.</b> Cliquez sur « Une erreur du réseau ». Il annonce un mat alors qu'il n'y a qu'un échec : la tour noire peut prendre la dame.</span></li>
+    </ol>
+    <h3>Ce que veut dire la réponse</h3>
+    <p>La couleur est celle du camp qui attaque. <span class="mono">Check White</span> : les blancs font échec au roi noir. C'est le format demandé par le sujet, en anglais.</p>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>Un réseau de neurones ne lit que des nombres. Tout le travail est donc de bien décrire le plateau, puis de laisser le réseau apprendre.</p>
+    <svg class="mt-schema" viewBox="0 0 470 150" role="img" aria-label="Schéma : le plateau devient 1050 nombres, qui traversent deux couches de 256 et 128 neurones, puis une sortie de 5 probabilités.">
+      <rect class="box" x="4" y="42" width="78" height="66" rx="3"/>
+      <text class="t" x="43" y="70" text-anchor="middle">Plateau</text>
+      <text x="43" y="88" text-anchor="middle">(FEN)</text>
+      <rect class="box" x="118" y="24" width="96" height="46" rx="3"/>
+      <text class="t" x="166" y="44" text-anchor="middle">774</text>
+      <text x="166" y="60" text-anchor="middle">où sont les pièces</text>
+      <rect class="box" x="118" y="80" width="96" height="46" rx="3" style="stroke:var(--accent)"/>
+      <text class="t" x="166" y="100" text-anchor="middle">276</text>
+      <text x="166" y="116" text-anchor="middle">qui tient quoi</text>
+      <rect class="box" x="250" y="34" width="46" height="82" rx="3"/>
+      <text class="t" x="273" y="72" text-anchor="middle">256</text>
+      <text x="273" y="88" text-anchor="middle">ReLU</text>
+      <rect class="box" x="322" y="46" width="46" height="58" rx="3"/>
+      <text class="t" x="345" y="72" text-anchor="middle">128</text>
+      <text x="345" y="88" text-anchor="middle">ReLU</text>
+      <rect class="box" x="394" y="54" width="72" height="42" rx="3"/>
+      <text class="t" x="430" y="72" text-anchor="middle">5</text>
+      <text x="430" y="88" text-anchor="middle">réponses</text>
+      <g class="a">
+        <path d="M82 66 L112 50M82 84 L112 100M214 47 L244 66M214 103 L244 84M296 75H316M368 75H388"/>
+      </g>
+      <g class="af">
+        <path d="M118 47l-8 0 3 7zM118 103l-8 0 3-7zM250 69l-7-4-1 8zM250 81l-7 4-1-8zM322 75l-7-4v8zM394 75l-7-4v8z"/>
+      </g>
+      <text x="166" y="142" text-anchor="middle">1050 nombres</text>
+      <text x="430" y="114" text-anchor="middle">softmax</text>
+    </svg>
+    <ol class="mt-list">
+      <li><b>Le placement (774 nombres).</b> Pour chaque case et chaque type de pièce, un 1 ou un 0. S'y ajoutent le trait, les droits de roque et la prise en passant.</li>
+      <li><b>La géométrie (276 nombres).</b> Les cases tenues par chaque camp, les cases où chaque roi peut fuir, le nombre de pièces qui le visent, et la ligne d'attaque : la pièce qui vise le roi et les cases vides entre eux.</li>
+      <li><b>Deux couches de neurones.</b> Chaque neurone fait une somme pondérée de ses entrées et ne garde que le positif (ReLU).</li>
+      <li><b>La sortie.</b> Cinq probabilités dont la somme vaut 1 (softmax). La plus haute est la réponse.</li>
+    </ol>
+    <p>La règle que nous nous sommes fixée : donner au réseau ce qu'un joueur voit, pas ce qu'il déduit. L'encodage ne dit jamais « le roi est en échec » ni « c'est mat ». Il ne sait pas non plus qu'une pièce clouée ne peut pas bouger : c'est de là que viennent les erreurs qui restent.</p>
+    <h3>Qui a fait quoi</h3>
+    <p>Projet à deux. Mon binôme a écrit la première version : la bibliothèque de base et un premier réseau à 75,7 %. J'ai ensuite repris le projet : séparation entre la bibliothèque et le code des échecs, scripts de données et de mesure, entraînement sur un jeu plus grand (84,8 %), puis l'encodage géométrique montré ici (97,3 %).</p>
+    <h3>Ce qui change par rapport au C++</h3>
+    <p>Le projet d'origine est un programme en ligne de commande. Il lit un fichier de plateaux et écrit une réponse par ligne. Il sait aussi entraîner un réseau (rétropropagation, momentum, dropout, arrêt anticipé) : cette page ne reprend que la prédiction.</p>
+    <p>J'ai ajouté pour le web : l'échiquier à la souris ou au doigt, les cases colorées, l'affichage des couches et des probabilités. Le fichier du réseau est en texte dans le projet (6,6 Mo) : je l'ai converti en binaire (1,2 Mo), avec des poids en simple précision. Les réponses restent les mêmes.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Classer des cas automatiquement</h3><p>Le même schéma sert à trier des tickets, des pièces ou des transactions : décrire chaque cas en nombres, entraîner, puis mesurer sur des cas jamais vus.</p></div>
+    <div><h3>Mieux décrire avant de grossir</h3><p>Ici, un réseau deux fois plus gros n'apportait rien. Mieux décrire l'entrée a fait gagner 12 points. C'est souvent le levier le moins cher.</p></div>
+    <div><h3>Un modèle léger, sans dépendance</h3><p>Le réseau tient en 1,2 Mo et répond en moins d'une milliseconde, sans serveur ni carte graphique. Il peut tourner dans un navigateur ou sur une petite machine.</p></div>
+    <div><h3>Ce que ce projet montre</h3><p>Du C++ bas niveau, les maths d'un réseau écrites à la main, et une méthode : jeux de test séparés, matrice de confusion, limites écrites noir sur blanc.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

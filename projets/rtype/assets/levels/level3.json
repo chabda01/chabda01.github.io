@@ -1,0 +1,12 @@
+{
+    "name": "Level 3 - The Bydos Mothership",
+    "waves": [
+        { "time": 1.0, "type": "bydos", "count": 4, "y": 100, "pattern": "sine" },
+        { "time": 5.0, "type": "script:zigzag", "count": 4, "y": 100, "pattern": "linear", "spacing": 130 },
+        { "time": 9.0, "type": "snake", "count": 8, "y": 300, "pattern": "sine", "interval": 0.3 },
+        { "time": 13.0, "type": "turret", "count": 1, "y": 60, "pattern": "linear" },
+        { "time": 13.0, "type": "turret", "count": 1, "y": 620, "pattern": "linear" },
+        { "time": 15.0, "type": "kamikaze", "count": 3, "y": 200, "pattern": "linear", "spacing": 130, "drop": "rapidfire", "dropChance": 0.4 },
+        { "time": 20.0, "type": "boss", "count": 1, "y": 250, "pattern": "hover" }
+    ]
+}

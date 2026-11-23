@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOM DU PROJET — démo · Chabda Gbemetonou</title>
+<meta name="description" content="UNE PHRASE.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-XXX-400 · nom</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Nom du rayon</span>
+  <h1>Nom du projet</h1>
+  <p class="demo-hero__lede">Ce que fait le projet, en deux phrases simples.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en C++. Cette page en est une version web : le même algorithme, réécrit en JavaScript pour tourner dans votre navigateur.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <button class="btn" type="button">Action principale</button>
+        <button class="btn btn--ghost" type="button">Autre action</button>
+        <span class="stage__status" role="status">Prêt</span>
+      </div>
+      <!-- canvas, terminal (.term), tableau (.dtable)... -->
+    </div>
+    <div class="stage__side">
+      <span class="label">Réglages</span>
+      <div class="chips"><button class="chip is-on" type="button">Exemple 1</button><button class="chip" type="button">Exemple 2</button></div>
+      <label class="field">Un réglage<input type="range"></label>
+      <div class="stats"><div class="stat"><b>42</b><span>une mesure</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Première action.</b> Ce qu'on doit voir.</span></li>
+      <li><span><b>Deuxième action.</b> Ce qu'on doit voir.</span></li>
+    </ol>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>L'explication, en phrases courtes.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Un cas d'usage</h3><p>Une phrase.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="demo.js" defer></script>
+</body>
+</html>

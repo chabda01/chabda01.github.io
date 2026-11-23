@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arcade — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Une borne d'arcade jouable dans le navigateur : quatre jeux, trois bibliothèques d'affichage échangées en pleine partie derrière une interface commune.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage.ar{grid-template-columns:minmax(0,1fr) minmax(0,390px)}
+@media (max-width:1020px){
+  .stage.ar{grid-template-columns:minmax(0,1fr)}
+  .stage.ar .stage__side{box-shadow:inset 0 1px 0 var(--stage-line)}
+}
+.ar-cmd{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.74rem; color:var(--stage-ink-2); overflow-wrap:anywhere}
+.ar-wrap{max-width:600px; margin-inline:auto}
+.ar-screen{
+  position:relative; container-type:inline-size; aspect-ratio:600/536; background:#000; overflow:hidden;
+  border-radius:3px; box-shadow:0 0 0 1px var(--stage-line); cursor:pointer; outline:none;
+}
+.ar-screen:focus{box-shadow:0 0 0 2px var(--gold)}
+.ar-canvas{width:100%; height:100%; border-radius:0 !important}
+.ar-term{
+  position:absolute; inset:0; font-family:"JetBrains Mono","DejaVu Sans Mono",ui-monospace,Menlo,Consolas,monospace;
+  font-size:2.9cqw; line-height:3.3086cqw; color:#D9D1C3; white-space:pre; overflow:hidden; user-select:none; -webkit-user-select:none;
+}
+.ar-term div{height:3.3086cqw; overflow:hidden}
+.ar-term .k1{color:#E5594C} .ar-term .k2{color:#5FD35F} .ar-term .k3{color:#DCCB3C} .ar-term .k4{color:#6C8CFF}
+.ar-term .k5{color:#D76BD7} .ar-term .k6{color:#4FD3D3} .ar-term .k7{color:#E6E0D4} .ar-term .k12{color:#5FD35F; font-weight:700}
+.ar-holder{position:relative}
+.ar-exit{position:absolute; inset:0; background:#000; border-radius:3px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.8rem; padding:1rem; text-align:center; cursor:default}
+.ar-exit[hidden]{display:none}
+.ar-exit p{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.8rem}
+.ar-exit .btn{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.72rem}
+.ar-hint{margin:.6rem 0 0; font-size:.78rem !important; color:var(--stage-ink-3) !important}
+.ar-msg{min-height:1.5em; margin:.5rem 0 0; font-size:.82rem !important; color:var(--gold) !important}
+.ar-pad{display:flex; flex-wrap:wrap; gap:.8rem 1.2rem; align-items:flex-end; justify-content:space-between; margin-top:.8rem}
+.ar-fn{display:flex; flex-wrap:wrap; gap:.4rem; flex:1 1 220px}
+.ar-key{
+  font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.7rem; cursor:pointer; min-height:40px; min-width:44px;
+  padding:.3rem .6rem; border-radius:5px; color:var(--stage-ink); background:rgba(255,255,255,.05);
+  border:1px solid var(--stage-line); touch-action:manipulation; user-select:none; -webkit-user-select:none;
+}
+.ar-key small{display:block; font-family:"Instrument Sans",system-ui,sans-serif; font-size:.64rem; color:var(--stage-ink-3)}
+.ar-key:hover{border-color:var(--gold)} .ar-key:active{background:rgba(233,168,85,.25)}
+.ar-key:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.ar-dir{display:grid; grid-template-columns:repeat(3,48px) auto; grid-template-rows:repeat(2,44px); gap:.3rem}
+.ar-dir .u{grid-column:2; grid-row:1} .ar-dir .l{grid-column:1; grid-row:2} .ar-dir .d{grid-column:2; grid-row:2} .ar-dir .r{grid-column:3; grid-row:2}
+.ar-dir .sp{grid-column:4; grid-row:1; margin-left:.5rem} .ar-dir .en{grid-column:4; grid-row:2; margin-left:.5rem}
+.ar-name{display:flex; gap:.4rem; align-items:center; margin-top:.7rem}
+.ar-name[hidden]{display:none}
+.ar-name input{flex:1; min-width:0; font:inherit; font-size:1rem; color:var(--stage-ink); background:#0F0D0A; border:1px solid var(--stage-line); border-radius:4px; padding:.45rem .6rem}
+.ar-opt{display:flex; gap:.5rem; align-items:flex-start; font-size:.78rem; color:var(--stage-ink-2); margin-top:.9rem}
+.ar-opt input{accent-color:var(--gold); margin-top:.2rem}
+.ar-proc{display:flex; flex-direction:column; gap:.4rem}
+.ar-box{padding:.55rem .7rem; border-radius:4px; background:rgba(255,255,255,.035); box-shadow:inset 0 0 0 1px var(--stage-line); min-width:0}
+.ar-box > span{display:block; font-size:.66rem; letter-spacing:.08em; text-transform:uppercase; color:var(--stage-ink-3)}
+.ar-box b{display:block; font-family:"JetBrains Mono",ui-monospace,monospace; font-weight:400; font-size:.76rem; color:var(--stage-ink); overflow-wrap:anywhere}
+.ar-box em{display:block; font-style:normal; font-size:.72rem; color:var(--stage-ink-2); overflow-wrap:anywhere}
+.ar-libs{display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.35rem}
+.ar-lib{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.68rem; padding:.15rem .5rem; border-radius:999px; color:var(--stage-ink-3); border:1px solid var(--stage-line)}
+.ar-lib.is-on{color:#1A1611; background:var(--gold); border-color:var(--gold)}
+.ar-lib i{font-style:normal; color:var(--ok)} .ar-lib.is-on i{color:#22561F}
+.ar-calls{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.68rem}
+.ar-calls tbody{vertical-align:top}
+.ar-calls td{height:1.55rem; padding:.22rem .3rem; overflow-wrap:anywhere}
+.ar-calls td:last-child{text-align:right; white-space:nowrap; color:var(--gold)}
+.ar-log{height:13.5rem; font-size:.68rem; line-height:1.5; padding:.6rem .7rem}
+.ar-scores{font-size:.72rem; max-height:7rem; padding:.5rem .7rem}
+.ar-sub{display:flex; align-items:baseline; justify-content:space-between; gap:.6rem}
+.ar-sub button{font:inherit; font-size:.72rem; color:var(--stage-ink-3); background:none; border:0; cursor:pointer; text-decoration:underline}
+.ar-sub button:hover{color:var(--gold)}
+.ar-api{font-size:.8rem; color:var(--stage-ink-2)}
+.ar-api summary{cursor:pointer; color:var(--stage-ink); font-size:.82rem}
+.ar-api summary:hover{color:var(--gold)}
+.ar-api pre{margin:.5rem 0 0; font-size:.66rem; line-height:1.55; white-space:pre; overflow:auto}
+.ar-schema{display:block; width:100%; height:auto; max-width:460px; margin:1rem 0 .6rem}
+.ar-schema text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:12px; fill:var(--ink-2)}
+.ar-schema .b{fill:none; stroke:var(--rule); stroke-width:1.2}
+.ar-schema .a{stroke:var(--accent); stroke-width:1.4; fill:none}
+.ar-schema .t{fill:var(--accent); font-weight:600}
+.ar-list{margin:0 0 1rem; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.ar-list li{margin-bottom:.45em}
+.demo-cols h3{font-size:1rem; margin:1.4rem 0 .5rem}
+kbd{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.82em; padding:.05em .35em; border-radius:3px; box-shadow:inset 0 0 0 1px var(--rule)}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-OOP-400 · arcade</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Moteurs et rendu</span>
+  <h1>Arcade</h1>
+  <p class="demo-hero__lede">Une borne d'arcade dont le programme principal ne sait ni dessiner ni jouer. Il charge à chaud une bibliothèque d'affichage et une bibliothèque de jeu, et les fait parler à travers une interface commune. On peut donc changer d'affichage en pleine partie sans rien perdre.</p>
+  <p class="demo-origin">Projet de groupe, à trois, écrit en C++. Ma part : les jeux Snake et Nibbler (avec ses 32 niveaux) et la bibliothèque d'affichage ncurses. Mes coéquipiers ont écrit le cœur, les affichages SDL2 et SFML, Minesweeper et Breakout. Cette page en est une version web : les mêmes règles et la même interface, que j'ai réécrites en JavaScript pour qu'elles tournent dans votre navigateur.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage ar" id="ar-stage">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <span class="ar-cmd" id="ar-cmd">$ ./arcade ./lib/arcade_ncurses.so</span>
+        <span class="stage__status" role="status" id="ar-status">Prêt</span>
+      </div>
+      <div class="ar-wrap">
+        <div class="ar-holder">
+        <div class="ar-screen" id="ar-screen" tabindex="0" role="application" aria-label="Écran de la borne d'arcade. Cliquez puis jouez au clavier. Maj + Tab pour sortir."></div>
+        <div class="ar-exit" id="ar-exit" hidden>
+          <p>Le programme s'est terminé (code <span id="ar-exit-code">0</span>).</p>
+          <button class="btn" type="button" data-launch="./lib/arcade_ncurses.so">./arcade ./lib/arcade_ncurses.so</button>
+          <button class="btn btn--ghost" type="button" data-launch="./lib/arcade_sdl2.so">./arcade ./lib/arcade_sdl2.so</button>
+          <button class="btn btn--ghost" type="button" data-launch="./lib/arcade_sfml.so">./arcade ./lib/arcade_sfml.so</button>
+        </div>
+        </div>
+        <p class="ar-hint">Cliquez sur l'écran pour jouer au clavier, ou utilisez les boutons. <kbd>Maj</kbd> + <kbd>Tab</kbd> rend le clavier à la page.</p>
+        <p class="ar-msg" id="ar-msg" role="status"></p>
+
+        <div class="ar-name" id="ar-name-row" hidden>
+          <input id="ar-name-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="20" placeholder="Tapez votre nom ici" aria-label="Nom du joueur">
+          <button class="ar-key" type="button" data-k="Backspace">⌫</button>
+          <button class="ar-key" type="button" data-k="Enter">OK</button>
+        </div>
+
+        <div class="ar-pad">
+          <div class="ar-fn">
+            <button class="ar-key" type="button" data-k="Tab">TAB<small>affichage suivant</small></button>
+            <button class="ar-key" type="button" data-k="F2">F2<small>jeu suivant</small></button>
+            <button class="ar-key" type="button" data-k="r">R<small>(re)charger le jeu</small></button>
+            <button class="ar-key" type="button" data-k="m">M<small>menu</small></button>
+            <button class="ar-key" type="button" data-k="n">N<small>nom</small></button>
+            <button class="ar-key" type="button" data-k="q">Q<small>quitter</small></button>
+          </div>
+          <div class="ar-dir">
+            <button class="ar-key u" type="button" data-k="Up" aria-label="Haut">↑</button>
+            <button class="ar-key l" type="button" data-k="Left" aria-label="Gauche">←</button>
+            <button class="ar-key d" type="button" data-k="Down" aria-label="Bas">↓</button>
+            <button class="ar-key r" type="button" data-k="Right" aria-label="Droite">→</button>
+            <button class="ar-key sp" type="button" data-k="Space">ESPACE</button>
+            <button class="ar-key en" type="button" data-k="Enter">ENTRÉE</button>
+          </div>
+        </div>
+        <label class="ar-opt"><input type="checkbox" id="ar-intro"><span>Rejouer l'introduction de ncurses à chaque chargement, comme le vrai programme (sinon elle ne passe qu'une fois).</span></label>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <span class="label">Dans le processus</span>
+      <div class="ar-proc">
+        <div class="ar-box"><span>Cœur · ./arcade</span><b id="ar-p-core">—</b></div>
+        <div class="ar-box"><span>Affichage chargé · IDisplay</span><b id="ar-p-display">—</b><em id="ar-p-display-s">—</em>
+          <div class="ar-libs" id="ar-displays"></div></div>
+        <div class="ar-box"><span>Jeu chargé · IGame</span><b id="ar-p-game">—</b><em id="ar-p-game-s">—</em>
+          <div class="ar-libs" id="ar-games"></div></div>
+      </div>
+
+      <span class="label">Appels de la dernière image</span>
+      <table class="dtable ar-calls" style="min-height:17.5rem"><tbody id="ar-calls"></tbody></table>
+
+      <span class="label">Journal : chargements et touches</span>
+      <div class="term ar-log" id="ar-log" aria-label="Journal des appels"></div>
+
+      <div>
+        <div class="ar-sub"><span class="label">scores.txt</span><button type="button" id="ar-clear">Effacer</button></div>
+        <pre class="term ar-scores" id="ar-scores"></pre>
+      </div>
+
+      <details class="ar-api">
+        <summary>L'interface IDisplay (copiée du projet)</summary>
+<pre class="term">class IDisplay {
+public:
+    virtual ~IDisplay() = default;
+
+    virtual void init() = 0;
+    virtual void close() = 0;
+
+    virtual void clear() = 0;
+    virtual void render() = 0;
+
+    virtual void drawCell(int x, int y, const Cell &amp;cell) = 0;
+    virtual void drawText(int x, int y, const std::string &amp;text,
+                          Color fg = Color::WHITE) = 0;
+
+    virtual Key getInput() = 0;
+
+    virtual int getWidth() const = 0;
+    virtual int getHeight() const = 0;
+
+    virtual void showGameIntro(const std::string &amp;name) { (void)name; }
+    virtual char getChar() { return 0; }
+};
+
+struct Cell { char symbol; Color fg; Color bg; };
+
+extern "C" arcade::IDisplay *createDisplay();
+extern "C" void destroyDisplay(arcade::IDisplay *display);</pre>
+      </details>
+      <details class="ar-api">
+        <summary>L'interface IGame (copiée du projet)</summary>
+<pre class="term">class IGame {
+public:
+    virtual ~IGame() = default;
+
+    virtual void init(int width, int height) = 0;
+    virtual void close() = 0;
+
+    virtual void update(float deltaTime) = 0;
+    virtual void handleInput(Key key) = 0;
+
+    virtual void render(IDisplay &amp;display) = 0;
+
+    virtual bool isOver() const = 0;
+    virtual int getScore() const = 0;
+    virtual std::string getName() const = 0;
+};
+
+extern "C" arcade::IGame *createGame();
+extern "C" void destroyGame(arcade::IGame *game);</pre>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Cliquez sur l'écran, puis appuyez sur <kbd>Entrée</kbd>.</b> Le clic passe l'accueil de ncurses, <kbd>Entrée</kbd> lance Snake depuis le menu. Le serpent se dirige avec les flèches, <kbd>Espace</kbd> l'accélère.</span></li>
+      <li><span><b>En pleine partie, appuyez sur <kbd>Tab</kbd>.</b> L'affichage passe de ncurses à SDL2, puis à SFML. Le serpent, la pomme et le score ne bougent pas : à droite, « Jeu chargé » garde la même instance, seul l'affichage est déchargé et rechargé.</span></li>
+      <li><span><b>Changez de jeu avec <kbd>F2</kbd> puis <kbd>R</kbd>.</b> <kbd>F2</kbd> choisit le jeu suivant, <kbd>R</kbd> le charge. Le journal montre le <code>dlclose</code> de l'ancien jeu et le <code>dlopen</code> du nouveau.</span></li>
+      <li><span><b>Essayez les quatre jeux.</b> Nibbler : face à un carrefour, vous avez 3 secondes pour choisir. Minesweeper : <kbd>Espace</kbd> révèle, <kbd>Entrée</kbd> pose un drapeau. Breakout : <kbd>Espace</kbd> lance la balle, une flèche lance la raquette, une autre touche l'arrête.</span></li>
+      <li><span><b>Perdez, puis regardez le menu.</b> Le score part dans <code>scores.txt</code> et le meilleur de chaque jeu s'affiche. <kbd>N</kbd> dans le menu permet de saisir votre nom avant de jouer.</span></li>
+    </ol>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>Le cœur ne connaît que deux interfaces : <code>IDisplay</code> pour dessiner et lire le clavier, <code>IGame</code> pour les règles. Au démarrage, il ouvre chaque fichier <code>.so</code> du dossier <code>./lib</code> et regarde s'il contient <code>createDisplay</code> ou <code>createGame</code>. C'est ainsi qu'il trie les affichages et les jeux, sans liste écrite en dur.</p>
+    <svg class="ar-schema" viewBox="0 0 460 190" role="img" aria-label="Le cœur au centre, relié à gauche aux bibliothèques d'affichage par IDisplay et à droite aux jeux par IGame. Le jeu dessine à travers IDisplay.">
+      <rect class="b" x="6" y="20" width="118" height="26" rx="3"/><text x="16" y="37">arcade_ncurses.so</text>
+      <rect class="b" x="6" y="54" width="118" height="26" rx="3"/><text x="16" y="71">arcade_sdl2.so</text>
+      <rect class="b" x="6" y="88" width="118" height="26" rx="3"/><text x="16" y="105">arcade_sfml.so</text>
+      <rect class="b" x="336" y="8" width="118" height="26" rx="3"/><text x="346" y="25">arcade_snake.so</text>
+      <rect class="b" x="336" y="40" width="118" height="26" rx="3"/><text x="346" y="57">arcade_nibbler.so</text>
+      <rect class="b" x="336" y="72" width="118" height="26" rx="3"/><text x="346" y="89">…minesweeper.so</text>
+      <rect class="b" x="336" y="104" width="118" height="26" rx="3"/><text x="346" y="121">arcade_breakout.so</text>
+      <rect class="a" x="182" y="44" width="96" height="46" rx="4"/><text class="t" x="230" y="64" text-anchor="middle">Cœur</text><text x="230" y="80" text-anchor="middle">./arcade</text>
+      <path class="a" d="M124 67H182"/><text class="t" x="153" y="60" text-anchor="middle">IDisplay</text>
+      <path class="a" d="M278 67H336"/><text class="t" x="307" y="60" text-anchor="middle">IGame</text>
+      <path class="a" d="M395 130V160H65V114" stroke-dasharray="4 4"/>
+      <text x="230" y="178" text-anchor="middle">le jeu dessine avec drawCell() et drawText()</text>
+    </svg>
+    <p>À chaque image, le cœur lit une touche (<code>getInput</code>), la donne au jeu (<code>handleInput</code>), fait avancer le temps (<code>update</code>), puis demande au jeu de se dessiner (<code>render</code>). Le jeu n'envoie que des cases : un caractère, une couleur de texte, une couleur de fond. Chaque affichage en fait ce qu'il veut : ncurses écrit le caractère, SFML dessine un rond avec des yeux pour la tête du serpent.</p>
+    <p>Comme tout l'état de la partie est dans l'objet du jeu, changer d'affichage revient à fermer une bibliothèque et à en ouvrir une autre. Le jeu ne s'en rend pas compte.</p>
+    <h3>Ma part</h3>
+    <ul class="ar-list">
+      <li><b>Snake et Nibbler.</b> Le serpent avance par pas de temps, pas à chaque image. Dans Nibbler, il tourne seul quand un seul côté est libre et attend le joueur à un carrefour. J'ai aussi dessiné les 32 niveaux.</li>
+      <li><b>L'affichage ncurses.</b> Les couleurs, la lecture du clavier, l'écran d'accueil et la barre de chargement.</li>
+    </ul>
+    <p>L'interface n'était pas fournie. Nous l'avons négociée avec un autre groupe, pour que leurs jeux tournent sur nos affichages et l'inverse.</p>
+    <h3>Ce qui change par rapport au vrai programme</h3>
+    <ul class="ar-list">
+      <li>Les <code>.so</code>, <code>dlopen</code> et les adresses sont simulés : ici, une « bibliothèque » est un objet JavaScript. L'ordre des appels est celui du cœur d'origine.</li>
+      <li>J'ai comparé les quatre jeux aux vrais, compilés à part : sur 160 parties rejouées avec le même hasard, les appels d'affichage sont identiques un à un.</li>
+      <li>Dans le dépôt, ncurses ne traduit pas la barre d'espace. Je l'ai ajoutée ici pour que tous les jeux soient jouables dans les trois affichages.</li>
+      <li>L'introduction de ncurses dure 7,5 secondes dans le vrai programme. Ici elle est raccourcie et ne passe qu'une fois, sauf si vous cochez la case.</li>
+      <li>Pas de son. Les polices sont celles de la page. <code>scores.txt</code> est gardé dans votre navigateur, au même format.</li>
+      <li>Les boutons à l'écran et le champ de saisie du nom sont ajoutés pour le tactile.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Changer de fournisseur sans tout réécrire</h3><p>Un logiciel qui parle à son moyen de paiement, sa base ou son imprimante à travers une interface peut en changer sans toucher au métier. C'est le même principe que nos trois affichages.</p></div>
+    <div><h3>Ajouter des modules sans arrêter le service</h3><p>Charger et décharger du code pendant que le programme tourne, c'est la base des systèmes à greffons : un outil interne reçoit une nouvelle fonction sans être redéployé en entier.</p></div>
+    <div><h3>Travailler à plusieurs équipes</h3><p>Une interface décidée ensemble permet à deux équipes d'avancer chacune de son côté et de brancher leurs parties à la fin. Nous l'avons vécu avec l'autre groupe.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="levels.js" defer></script>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

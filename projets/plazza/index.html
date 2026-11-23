@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Plazza — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Une chaîne de pizzerias simulée : tapez des commandes, regardez les cuisines s'ouvrir, cuire, puis fermer, avec les messages échangés entre processus.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.pz-mono,.kit,.fifo,.pz-cmd{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.pz-zone{font-size:.64rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--stage-ink-3); margin:0 0 .5rem}
+.pz-zone em{font-style:normal; font-weight:400; letter-spacing:.02em; text-transform:none}
+
+/* réception */
+.pz-rec{padding:.9rem 1rem; border-radius:4px; background:rgba(255,255,255,.035); box-shadow:inset 0 0 0 1px var(--stage-line)}
+.pz-cmd{font-size:.74rem; color:var(--stage-ink-2); margin-bottom:.6rem; overflow-wrap:anywhere}
+.pz-cmd b{font-weight:400; color:var(--gold)}
+.pz-in{display:flex; align-items:center; gap:.5rem; margin-bottom:.7rem}
+.pz-in > span{color:var(--gold); font-size:.8rem}
+.pz-in input{
+  flex:1; min-width:0; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:16px;
+  color:var(--stage-ink); background:#0F0D0A; border:1px solid var(--stage-line); border-radius:4px; padding:.45rem .6rem;
+}
+.pz-in input:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.pz-in .btn{padding:.5rem .9rem}
+.pz-clock{display:flex; flex-wrap:wrap; gap:.3rem 1rem; align-items:baseline; margin:1.1rem 0 .5rem}
+.pz-clock .pz-zone{margin:0}
+.pz-clock span{margin-left:auto; font-size:.72rem; color:var(--stage-ink-3)}
+
+/* cuisines */
+.pz-kits{display:grid; grid-template-columns:repeat(auto-fill,minmax(235px,1fr)); gap:.7rem; min-height:9rem; align-items:start}
+.pz-empty{grid-column:1/-1; align-self:center; text-align:center; font-size:.84rem !important; color:var(--stage-ink-3) !important; padding:2rem 1rem; border-radius:4px; box-shadow:inset 0 0 0 1px var(--stage-line)}
+.kit{font-size:.68rem; line-height:1.5; color:var(--stage-ink-2); padding:.7rem .75rem; border-radius:4px; background:#100E0B; box-shadow:inset 0 0 0 1px var(--stage-line); min-width:0; animation:kit-in .35s ease both}
+@keyframes kit-in{from{opacity:0; transform:translateY(-6px)}}
+.kit.is-stopping{box-shadow:inset 0 0 0 1px rgba(224,119,95,.45)}
+.kit.is-closed{opacity:.35; transition:opacity .5s}
+.kit header{display:flex; align-items:baseline; gap:.5rem; margin-bottom:.35rem}
+.kit header b{font-family:"Instrument Sans",system-ui,sans-serif; font-size:.92rem; font-weight:600; color:var(--stage-ink)}
+.kit header span{margin-left:auto; text-align:right; color:var(--stage-ink-3)}
+.kit.is-stopping header span{color:var(--bad)}
+.kit__load{display:grid; grid-template-columns:1fr auto; gap:.15rem .5rem; margin-bottom:.45rem}
+.kit__load i{grid-column:1/-1; height:4px; border-radius:2px; background:var(--stage-line); overflow:hidden}
+.kit__load u,.cook u{display:block; height:100%; background:var(--gold); transform-origin:left center; transform:scaleX(0)}
+.kit__load .is-gap{color:var(--bad)}
+.fifo{display:grid; grid-template-columns:auto 1fr auto; gap:.5rem; align-items:center; color:var(--stage-ink-3)}
+.fifo i{position:relative; height:10px; overflow:hidden; background:linear-gradient(var(--stage-line),var(--stage-line)) center/100% 1px no-repeat}
+.fifo s{position:absolute; top:2px; left:0; width:6px; height:6px; border-radius:50%; background:var(--gold); opacity:0; animation:pk .55s linear both}
+.fifo--up s{background:var(--ok); animation-name:pk-up}
+@keyframes pk{0%{left:0; opacity:1} 100%{left:calc(100% - 6px); opacity:1}}
+@keyframes pk-up{0%{left:calc(100% - 6px); opacity:1} 100%{left:0; opacity:1}}
+.fifo em{font-style:normal; min-width:1.4rem; text-align:right; color:var(--stage-ink-2)}
+.kit h4{font-family:"Instrument Sans",system-ui,sans-serif; font-size:.6rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--stage-ink-3); margin:.55rem 0 .25rem}
+.kit h4 em{font-style:normal; font-weight:400; letter-spacing:0; text-transform:none}
+.cooks{margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:.3rem}
+.cook{display:grid; grid-template-columns:1.5rem 1fr; gap:0 .4rem}
+.cook b{font-weight:400; color:var(--stage-ink-3)}
+.cook span{overflow-wrap:anywhere}
+.cook i{grid-column:2; height:3px; border-radius:2px; background:var(--stage-line); overflow:hidden}
+.cook.is-cook span{color:var(--stage-ink)}
+.cook.is-stock span{color:var(--bad)}
+.cook.is-cond span{color:var(--stage-ink-3)}
+.cook.is-stock u{background:var(--bad)}
+.kit__queue{display:flex; flex-wrap:wrap; gap:.25rem; min-height:1.25rem}
+.kit__queue span{padding:0 .4rem; border-radius:3px; background:rgba(233,168,85,.12); color:var(--stage-ink)}
+.kit__queue em{font-style:normal; color:var(--stage-ink-3)}
+.kit__stock{display:grid; grid-template-columns:repeat(3,1fr); gap:.2rem}
+.kit__stock span{display:flex; justify-content:space-between; gap:.3rem; padding:0 .35rem; border-radius:3px; background:rgba(255,255,255,.04)}
+.kit__stock b{font-weight:400; color:var(--stage-ink)}
+.kit__stock .is-zero{background:rgba(224,119,95,.16)}
+.kit__stock .is-zero b{color:var(--bad)}
+.kit__stock .is-up b{color:var(--ok)}
+
+/* journaux */
+.pz-logs{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; margin-top:1.2rem}
+.pz-logs .term{height:230px; font-size:.7rem; line-height:1.55; padding:.7rem .8rem}
+.pz-logs .term div{min-height:1.55em}
+.pz-logs .t-hex{color:#A9C7D8}
+@media (max-width:700px){ .pz-logs{grid-template-columns:minmax(0,1fr)} .pz-logs .term{height:190px} }
+
+/* côté */
+.pz-args{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem}
+.pz-args .field{font-size:.7rem; justify-content:space-between}
+.pz-args input{font-size:16px; padding:.4rem .45rem}
+.pz-note{font-size:.74rem !important; color:var(--stage-ink-3) !important; margin:0}
+.pz-note b{color:var(--stage-ink-2); font-weight:600}
+.pz-locks{margin:0; padding:0; list-style:none; font-size:.74rem; color:var(--stage-ink-2); display:flex; flex-direction:column; gap:.45rem}
+.pz-locks b{color:var(--stage-ink); font-weight:600}
+.stat.is-bad b{color:var(--bad)}
+.stage__side .stats{grid-template-columns:repeat(2,minmax(0,1fr)); gap:.5rem}
+.stage__side .stat b{font-size:1.4rem}
+
+/* explications */
+.pz-schema{display:block; width:100%; max-width:460px; height:auto; margin:.4rem 0 1.2rem}
+.pz-schema text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:11px; fill:var(--ink-2)}
+.pz-schema .h{font-weight:600; font-size:12px; fill:var(--ink)}
+.pz-schema .m{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:9.5px}
+.pz-schema rect{fill:none; stroke:var(--rule)}
+.pz-schema .p{stroke:var(--ink-3)}
+.pz-schema .a{stroke:var(--accent); fill:none}
+.pz-schema .af{fill:var(--accent)}
+.demo-cols code,.steps code,.pz-flaw code{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.84em; padding:.08em .35em; border-radius:3px; background:var(--wash); color:var(--ink)}
+.demo-cols h3{font-size:1rem; margin:1.4rem 0 .4rem}
+.pz-list{margin:0 0 1rem; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.pz-list li{margin-bottom:.45em}
+.pz-flaw{padding-block:1rem 1rem}
+.pz-flaw h2{font-size:clamp(1.6rem,3.4vw,2.1rem); margin-bottom:1rem}
+.pz-flaw p{color:var(--ink-2); margin-bottom:.9em; max-width:68ch}
+.pz-rec .chips{gap:.35rem}
+@media (max-width:520px){
+  .pz-in{flex-wrap:wrap} .pz-in input{flex:1 1 70%} .pz-in .btn{flex:1 1 100%; justify-content:center}
+  .pz-clock span{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){ .kit{animation:none} .fifo s{display:none} }
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-CCP-400 · theplazza</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Systèmes, réseau et concurrence</span>
+  <h1>The Plazza</h1>
+  <p class="demo-hero__lede">Une chaîne de pizzerias simulée. La réception lit les commandes et les répartit entre des cuisines. Chaque cuisine est un processus à part, avec ses cuisiniers (des threads) et son stock d'ingrédients. Une cuisine sans travail ferme toute seule.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en C++, à trois, avec de vrais processus (<span class="mono">fork</span>), de vrais threads et des tubes nommés. Un navigateur ne peut pas créer de processus&nbsp;: cette page fait donc tourner une version réécrite en JavaScript, où processus et threads sont joués par un ordonnanceur à temps virtuel. Les règles, les textes affichés et les octets échangés sont ceux du code.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage" id="stage">
+    <div class="stage__main">
+      <p class="pz-zone">Réception <em>· processus père</em></p>
+      <div class="pz-rec">
+        <div class="pz-cmd" id="cmdline"></div>
+        <form class="pz-in" id="form" autocomplete="off">
+          <span aria-hidden="true">&gt;</span>
+          <input id="line" type="text" aria-label="Commande à envoyer à la réception" value="regina XXL x2; fantasia M x3" spellcheck="false" autocapitalize="off">
+          <button class="btn" type="submit">Envoyer</button>
+        </form>
+        <div class="chips" id="examples">
+          <button class="chip" type="button" data-line="regina XXL x2; fantasia M x3">Commande simple</button>
+          <button class="chip" type="button" data-line="margarita S x1; regina M x1; americana L x1; fantasia XL x1">Les quatre pizzas</button>
+          <button class="chip" type="button" data-rush="1">Coup de feu du samedi soir</button>
+          <button class="chip" type="button" data-line="margarita M x12">Vider le stock</button>
+          <button class="chip" type="button" data-line="calzone M x2">Commande invalide</button>
+          <button class="chip" type="button" data-line="status">status</button>
+        </div>
+      </div>
+
+      <div class="pz-clock">
+        <p class="pz-zone">Cuisines <em>· un processus fils chacune, reliée par deux tubes nommés</em></p>
+        <span class="pz-mono" id="clock" role="status">t = 0,0 s</span>
+      </div>
+      <div class="pz-kits" id="kits">
+        <p class="pz-empty" id="empty">Aucune cuisine ouverte. Envoyez une commande&nbsp;: la réception en ouvre une.</p>
+      </div>
+
+      <div class="pz-logs">
+        <div>
+          <p class="pz-zone">Sortie du programme <em>· texte exact</em></p>
+          <div class="term" id="out" aria-live="off"></div>
+        </div>
+        <div>
+          <p class="pz-zone">Tubes nommés <em>· octets échangés</em></p>
+          <div class="term" id="ipc" aria-live="off"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <span class="label">Arguments du programme</span>
+      <div class="pz-args">
+        <label class="field">Temps de cuisson ×<input id="a-mult" type="number" min="0.1" max="5" step="0.1" value="1" inputmode="decimal"></label>
+        <label class="field">Cuisiniers par cuisine<input id="a-cooks" type="number" min="1" max="8" step="1" value="3" inputmode="numeric"></label>
+        <label class="field">Stock&nbsp;: délai (ms)<input id="a-restock" type="number" min="200" max="20000" step="100" value="2000" inputmode="numeric"></label>
+      </div>
+      <div class="chips">
+        <button class="btn btn--ghost" type="button" id="relaunch">Relancer le programme</button>
+      </div>
+
+      <span class="label">Comptage dans la cuisine</span>
+      <div class="chips" id="modes">
+        <button class="chip" type="button" data-mode="origine" aria-pressed="true">Code d'origine</button>
+        <button class="chip" type="button" data-mode="corrige" aria-pressed="false">Avec le correctif</button>
+      </div>
+      <p class="pz-note" id="mode-note"></p>
+
+      <span class="label">Vitesse du temps (ajout de la page)</span>
+      <div class="chips" id="speeds">
+        <button class="chip" type="button" data-speed="0" aria-pressed="false">Pause</button>
+        <button class="chip" type="button" data-speed="1" aria-pressed="true">×1</button>
+        <button class="chip" type="button" data-speed="2" aria-pressed="false">×2</button>
+        <button class="chip" type="button" data-speed="4" aria-pressed="false">×4</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><b id="s-sent">0</b><span>pizzas commandées</span></div>
+        <div class="stat"><b id="s-ready">0</b><span>pizzas prêtes</span></div>
+        <div class="stat" id="s-lost-box"><b id="s-lost">0</b><span>commandes perdues</span></div>
+        <div class="stat"><b id="s-kit">0</b><span>cuisines ouvertes</span></div>
+      </div>
+
+      <span class="label">Pourquoi rien ne se mélange</span>
+      <ul class="pz-locks">
+        <li><b>Stock&nbsp;: un mutex.</b> Un cuisinier vérifie et prend tous ses ingrédients d'un seul coup, ou rien. S'il en manque, il réessaie jusqu'au prochain réapprovisionnement.</li>
+        <li><b>File de tâches&nbsp;: un mutex et une variable de condition.</b> Un cuisinier sans travail dort. Il est réveillé quand une commande arrive.</li>
+        <li><b>Tube des résultats&nbsp;: un mutex.</b> Deux cuisiniers n'écrivent jamais en même temps.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Cliquez sur «&nbsp;Envoyer&nbsp;».</b> La commande <code>regina XXL x2; fantasia M x3</code> part. Une cuisine s'ouvre, les points qui glissent sont les messages dans les tubes, les cuisiniers se mettent à cuire.</span></li>
+      <li><span><b>Lancez le «&nbsp;Coup de feu du samedi soir&nbsp;».</b> Cinq vagues de commandes arrivent. Quand une cuisine atteint 2&nbsp;×&nbsp;cuisiniers commandes en attente, la réception en ouvre une autre.</span></li>
+      <li><span><b>Tapez <code>status</code>.</b> La sortie affiche une ligne par cuisine, comme le vrai programme&nbsp;: <code>Kitchen 0 | pending=4/6</code>.</span></li>
+      <li><span><b>Cliquez sur «&nbsp;Vider le stock&nbsp;», deux fois de suite.</b> La pâte tombe à zéro. Un cuisinier passe en rouge&nbsp;: il attend le prochain réapprovisionnement.</span></li>
+      <li><span><b>Ne touchez plus à rien.</b> Cinq secondes sans commande et sans pizza en cours&nbsp;: la cuisine ferme. Passez ensuite sur «&nbsp;Avec le correctif&nbsp;» et rejouez le coup de feu pour comparer.</span></li>
+    </ol>
+
+    <h3>La grammaire des commandes</h3>
+    <ul class="pz-list">
+      <li><code>TYPE TAILLE xN</code>, plusieurs groupes séparés par <code>;</code>.</li>
+      <li>Types&nbsp;: <code>regina</code>, <code>margarita</code>, <code>americana</code>, <code>fantasia</code> (majuscules acceptées).</li>
+      <li>Tailles&nbsp;: <code>S</code> <code>M</code> <code>L</code> <code>XL</code> <code>XXL</code>, en majuscules.</li>
+      <li>Quantité&nbsp;: <code>x</code> suivi d'un entier qui ne commence pas par zéro.</li>
+      <li>Une seule erreur et toute la ligne est refusée, avec un message précis.</li>
+      <li>Autres commandes&nbsp;: <code>status</code>, <code>exit</code>.</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <svg class="pz-schema" viewBox="0 0 460 250" role="img" aria-label="Schéma : la réception envoie les commandes à chaque cuisine par un tube nommé, la cuisine renvoie les résultats par un second tube.">
+      <rect class="p" x="1" y="1" width="458" height="62" rx="4"/>
+      <text class="h" x="12" y="20">Réception — processus père</text>
+      <text x="12" y="38">lit une ligne, la vérifie, choisit une cuisine</text>
+      <text x="12" y="54">un thread écoute tous les tubes de résultats (poll)</text>
+      <path class="a" d="M110 63v44"/><path class="af" d="M110 111l-4-8h8z"/>
+      <path class="a" d="M350 111V67"/><path class="af" d="M350 63l-4 8h8z"/>
+      <text class="m" x="118" y="84">PizzaOrder</text><text class="m" x="118" y="96">12 octets</text>
+      <text class="m" x="258" y="84">PizzaResult</text><text class="m" x="258" y="96">16 octets</text>
+      <rect class="p" x="1" y="112" width="458" height="137" rx="4"/>
+      <text class="h" x="12" y="131">Cuisine — processus fils (fork)</text>
+      <rect x="12" y="142" width="130" height="44" rx="3"/>
+      <text x="20" y="160">thread principal</text><text x="20" y="176">lit les commandes</text>
+      <path class="a" d="M142 164h22"/><path class="af" d="M168 164l-8-4v8z"/>
+      <rect x="169" y="142" width="110" height="44" rx="3"/>
+      <text x="177" y="160">file de tâches</text><text x="177" y="176">mutex + condition</text>
+      <path class="a" d="M279 164h22"/><path class="af" d="M305 164l-8-4v8z"/>
+      <rect x="306" y="142" width="142" height="44" rx="3"/>
+      <text x="314" y="160">N cuisiniers (threads)</text><text x="314" y="176">cuisent, puis répondent</text>
+      <rect x="169" y="198" width="279" height="40" rx="3"/>
+      <text x="177" y="215">stock&nbsp;: 5 de chaque ingrédient, un mutex</text>
+      <text x="177" y="231">un thread ajoute 1 de chaque à intervalle fixe</text>
+      <path class="a" d="M377 186v8"/><path class="af" d="M377 198l-4-8h8z"/>
+    </svg>
+    <p><b>Répartir.</b> La réception garde, pour chaque cuisine, le nombre de pizzas envoyées et pas encore revenues. Elle prend la première cuisine de la liste qui en a moins de 2&nbsp;×&nbsp;cuisiniers. Si toutes sont pleines, elle en ouvre une nouvelle.</p>
+    <p><b>Parler entre processus.</b> Chaque cuisine a deux tubes nommés (<code>mkfifo</code>)&nbsp;: un pour les commandes, un pour les résultats. Le message est la structure C++ écrite telle quelle. Le journal de droite montre ces octets.</p>
+    <p><b>Cuire.</b> Margarita 1&nbsp;s, Regina 2&nbsp;s, Americana 2&nbsp;s, Fantasia 4&nbsp;s, multiplié par le premier argument. La taille ne change pas le temps.</p>
+    <p><b>Fermer.</b> La cuisine attend une commande avec <code>poll</code> pendant 5&nbsp;s. Si rien n'arrive et que rien ne cuit, elle sort. La réception lit alors «&nbsp;0 octet&nbsp;» sur le tube et retire la cuisine de sa liste.</p>
+    <h3>Ma part dans le groupe</h3>
+    <p>Nous étions trois. J'ai écrit la réception&nbsp;: lecture et contrôle des commandes, répartition, commande <code>status</code>, écoute des résultats. J'ai aussi écrit la communication entre processus par tubes nommés, avec ses tests unitaires, et le contrôle des arguments. La cuisine (threads, file de tâches, stock) et les briques de base (mutex, threads, processus) ont été écrites par mes coéquipiers.</p>
+  </div>
+</section>
+
+<section class="wrap pz-flaw">
+  <h2>Ce que la démo ne cache pas</h2>
+  <p><b>Un défaut du projet d'origine est reproduit.</b> Quand la cuisine reçoit une commande, elle compte ses pizzas en cours. Une pizza encore dans la file est comptée deux fois. Lors d'une rafale, la cuisine se croit pleine trop tôt et laisse tomber des commandes sans le dire. La réception, elle, attend toujours ces pizzas. En mode «&nbsp;Code d'origine&nbsp;», la page montre ces pertes en rouge. Le mode «&nbsp;Avec le correctif&nbsp;» ne compte chaque pizza qu'une fois&nbsp;: ce correctif n'est pas dans le dépôt, c'est un ajout de cette page.</p>
+  <p><b>Je l'ai mesuré sur le vrai programme.</b> Avec 2 cuisiniers et 4 pizzas envoyées d'un coup, 6 lancements ont servi 2, 3, 2, 2, 2 et 2 pizzas. Le résultat exact dépend de l'ordre dans lequel le système réveille les threads. La page prend le cas le plus fréquent&nbsp;: toute la rafale est lue avant qu'un cuisinier ne se réveille.</p>
+  <p><b>Autre cas reproduit.</b> Une cuisine qui a décidé de fermer attend d'abord la fin de la pause de son thread de stock. Pendant ce court moment, la réception peut encore lui envoyer une commande, qui est perdue aussi.</p>
+  <p><b>Ce qui est simulé.</b> Le temps est virtuel, donc exact et sans hasard. Le numéro de processus dans le nom des tubes est inventé. Le vrai <code>status</code> n'affiche que la ligne <code>pending</code>&nbsp;: les cuisiniers, la file et le stock dessinés ici sont l'état interne des cuisines, que le programme ne montre pas. Les réglages sont bornés et une ligne est limitée à 60 pizzas, pour garder la page légère.</p>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Traiter des tâches en file</h3><p>Envoi d'e-mails, génération de factures, conversion d'images&nbsp;: un répartiteur, des travailleurs, une file protégée. C'est le même schéma.</p></div>
+    <div><h3>Adapter les moyens à la charge</h3><p>Ouvrir un travailleur quand la demande monte, le fermer quand il ne sert plus&nbsp;: c'est ce que fait un service qui s'ajuste tout seul.</p></div>
+    <div><h3>Trouver les erreurs de concurrence</h3><p>Une commande perdue sans message d'erreur est le genre de panne qui coûte cher. Savoir la reproduire et l'expliquer permet de la corriger.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stone Analysis — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Analyse spectrale dans le navigateur : lisez un son, voyez ses fréquences, comparez la transformée de Fourier naïve et la FFT, cachez un message dans un fichier WAV.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage{--s1:#C98500; --s2:#3987E5; --ref:#8D8477; color-scheme:dark}
+.stage.is-drop{outline:2px dashed var(--gold); outline-offset:-8px}
+.src-note{font-size:.84rem; color:var(--stage-ink-2); margin:-.2rem 0 1rem; min-height:2.6em}
+.src-note b{color:var(--stage-ink); font-weight:600}
+.tagsynth{display:inline-block; font-size:.66rem; letter-spacing:.09em; text-transform:uppercase;
+  padding:.08rem .45rem; border-radius:3px; margin-right:.4rem; color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold)}
+.tagsynth--real{color:var(--ok); box-shadow:inset 0 0 0 1px var(--ok)}
+
+.fig{margin:0 0 1.1rem}
+.fig__head{display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .8rem; margin-bottom:.4rem}
+.fig__head h3{margin-right:auto}
+.fig__head .legend + .chips{margin-left:.4rem}
+.fig__plot{position:relative; background:#0F0D0A; border-radius:4px; box-shadow:inset 0 0 0 1px var(--stage-line)}
+.fig__plot canvas{width:100%; height:100%; touch-action:pan-y}
+.fig__plot--wave{height:120px}
+.fig__plot--spec{height:270px; cursor:crosshair}
+.fig__plot--heat{height:210px}
+.fig__cap{font-size:.76rem; color:var(--stage-ink-3); margin-top:.35rem}
+.tip{position:absolute; z-index:3; pointer-events:none; display:none; white-space:nowrap;
+  font-size:.74rem; line-height:1.45; padding:.35rem .55rem; border-radius:4px;
+  background:#262018; color:var(--stage-ink); box-shadow:0 0 0 1px var(--stage-line),0 6px 18px rgba(0,0,0,.5)}
+.tip i{font-style:normal; color:var(--stage-ink-3)}
+.legend{display:flex; flex-wrap:wrap; gap:.3rem 1rem; font-size:.76rem; color:var(--stage-ink-2)}
+.legend span{display:inline-flex; align-items:center; gap:.4rem}
+.legend span::before{content:""; width:14px; height:3px; border-radius:2px; background:var(--c)}
+.chips--sm .chip{font-size:.7rem; padding:.2rem .55rem}
+
+.tabs{display:flex; flex-wrap:wrap; gap:.4rem; margin:1.4rem 0 1rem; padding-top:1.1rem; box-shadow:inset 0 1px 0 var(--stage-line)}
+.tabs .chip{font-size:.82rem; padding:.42rem .9rem}
+.pane[hidden],.stage .btn[hidden]{display:none}
+.pane > p{margin-bottom:.8rem; max-width:68ch}
+.row{display:flex; flex-wrap:wrap; align-items:flex-end; gap:.7rem; margin-bottom:.9rem}
+.row .field{flex:1 1 150px; min-width:0}
+.row .field--sm{flex:0 1 110px}
+.verdict{margin-top:.8rem; padding:.7rem .9rem; border-radius:4px; font-size:.88rem; color:var(--stage-ink);
+  background:rgba(233,168,85,.08); box-shadow:inset 2px 0 0 var(--gold)}
+.verdict:empty{display:none}
+.verdict small{display:block; color:var(--stage-ink-3); font-size:.74rem; margin-top:.2rem}
+.verdict b{font-family:"Instrument Serif",Georgia,serif; font-weight:400; font-size:1.5rem; line-height:1; margin:0 .15rem}
+.stage audio{width:100%; height:38px; display:block}
+.stage a.btn{text-decoration:none}
+
+/* banc de mesure DFT / FFT */
+.bench{width:100%; border-collapse:collapse; font-size:.82rem; table-layout:fixed}
+.bench th{text-align:left; font-weight:600; font-size:.66rem; letter-spacing:.08em; text-transform:uppercase; color:var(--stage-ink-3); padding:.4rem .5rem}
+.bench th:first-child,.bench td:first-child{width:5.2rem}
+.bench th:last-child,.bench td:last-child{width:5.4rem; text-align:right}
+.bench td{padding:.5rem; box-shadow:inset 0 1px 0 var(--stage-line); color:var(--stage-ink-2); vertical-align:top}
+.bench td:first-child{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.76rem; color:var(--stage-ink)}
+.bench .t{display:block; font-variant-numeric:tabular-nums; color:var(--stage-ink); white-space:nowrap}
+.bench .t.is-wait{color:var(--stage-ink-3)}
+.bench .bar{display:block; height:6px; margin-top:.3rem; border-radius:0 3px 3px 0; min-width:1px; width:0; transition:width .15s linear}
+.bench .bar--dft{background:var(--s2)}
+.bench .bar--fft{background:var(--s1)}
+.bench .x{font-family:"Instrument Serif",Georgia,serif; font-size:1.25rem; line-height:1; color:var(--stage-ink)}
+.bench tr.is-est td{color:var(--stage-ink-3); font-style:italic}
+.bench tr.is-est .t{color:var(--stage-ink-2)}
+@media (max-width:520px){
+  .bench{font-size:.74rem}
+  .bench th:first-child,.bench td:first-child{width:3.6rem}
+  .bench th:last-child,.bench td:last-child{width:3.9rem}
+  .bench td,.bench th{padding:.45rem .3rem}
+  .bench .x{font-size:1.05rem}
+}
+
+/* clavier DTMF */
+.pad{display:grid; grid-template-columns:repeat(4,1fr); gap:.35rem}
+.pad button{font:inherit; font-size:1rem; font-weight:600; cursor:pointer; padding:.5rem 0; border-radius:4px;
+  color:var(--stage-ink); background:#0F0D0A; border:1px solid var(--stage-line); transition:border-color .15s,color .15s,background .15s}
+.pad button:hover{border-color:var(--gold); color:var(--gold)}
+.pad button.is-on{background:var(--gold); border-color:var(--gold); color:#1A1611}
+.pad button:focus-visible,.chip:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.side-block[hidden]{display:none}
+.side-block{display:flex; flex-direction:column; gap:.6rem}
+.side-block p{font-size:.8rem}
+.drop{border:1px dashed var(--stage-line); border-radius:4px; padding:.8rem; text-align:center; font-size:.8rem; color:var(--stage-ink-3)}
+.drop .btn{margin-bottom:.45rem}
+.stats .stat b{font-size:1.25rem}
+.stats .stat span{display:block; line-height:1.35; margin-top:.2rem}
+
+/* schémas de la partie « Comment ça marche » */
+.schema{margin:1.2rem 0; padding:1rem 1.1rem; border-radius:6px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--rule)}
+.schema svg{display:block; width:100%; height:auto; max-width:440px}
+.schema figcaption{font-size:.84rem; color:var(--ink-3); margin-top:.6rem}
+.schema text{font-family:"Instrument Sans",system-ui,sans-serif; fill:var(--ink-2)}
+.schema .big{font-family:"Instrument Serif",Georgia,serif; fill:var(--ink)}
+.schema .dot-a{fill:var(--ink-3)}
+.schema .dot-b{fill:var(--accent)}
+.frames{display:flex; flex-wrap:wrap; gap:3px; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.74rem}
+.frames span{padding:.3rem .5rem; border-radius:3px; background:var(--wash); box-shadow:inset 0 0 0 1px var(--rule); color:var(--ink)}
+.frames .mk{color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent-quiet)}
+.frames .rest{color:var(--ink-3); background:none}
+.how h3{font-size:1rem; margin:1.4rem 0 .4rem}
+.how code,.steps code{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.82em; color:var(--ink)}
+.addons{margin:.4rem 0 0; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.addons li{margin-bottom:.35rem}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-CNA-400 · stoneanalysis</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Calcul numérique</span>
+  <h1>Stone Analysis</h1>
+  <p class="demo-hero__lede">Un programme qui lit un son et dit de quelles fréquences il est fait. Il sait aussi cacher un message dans le son, puis le retrouver.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en C pur. Cette page en est une version web : les mêmes algorithmes, réécrits en JavaScript pour tourner dans votre navigateur. Ce que j'ai ajouté pour le web est signalé plus bas.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage" id="stage">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <div class="chips" id="sources" role="group" aria-label="Choix du signal">
+          <button class="chip" type="button" data-src="test" aria-pressed="false">test.wav du dépôt</button>
+          <button class="chip" type="button" data-src="dtmf" aria-pressed="false">Clavier téléphonique</button>
+          <button class="chip" type="button" data-src="motor" aria-pressed="false">Moteur</button>
+          <button class="chip" type="button" data-src="hum" aria-pressed="false">Ronflette 50 Hz</button>
+          <button class="chip" type="button" data-src="file" aria-pressed="false">Mon fichier WAV</button>
+        </div>
+        <span class="stage__status" id="status" role="status">Chargement…</span>
+      </div>
+      <p class="src-note" id="srcNote"></p>
+
+      <figure class="fig">
+        <div class="fig__head"><h3>Le son dans le temps</h3><div class="legend" id="waveLegend"></div>
+          <div class="chips chips--sm" id="zooms" role="group" aria-label="Portion du son affichée">
+            <button class="chip" type="button" data-zoom="0" aria-pressed="true">Tout</button>
+            <button class="chip" type="button" data-zoom="1" aria-pressed="false">Zoom : 20 ms</button>
+          </div>
+        </div>
+        <div class="fig__plot fig__plot--wave"><canvas id="wave" role="img" aria-label="Forme d'onde du signal"></canvas></div>
+      </figure>
+
+      <figure class="fig">
+        <div class="fig__head">
+          <h3>Le spectre : la force de chaque fréquence</h3>
+          <div class="chips chips--sm" id="ranges" role="group" aria-label="Zone de fréquences affichée">
+            <button class="chip" type="button" data-range="0,1000">0–1 kHz</button>
+            <button class="chip" type="button" data-range="0,2000">0–2 kHz</button>
+            <button class="chip" type="button" data-range="0,6000">0–6 kHz</button>
+            <button class="chip" type="button" data-range="17500,19000">17,5–19 kHz</button>
+            <button class="chip" type="button" data-range="all">Tout</button>
+            <button class="chip" type="button" id="dbToggle" aria-pressed="false">Échelle en dB</button>
+          </div>
+        </div>
+        <div class="fig__plot fig__plot--spec"><canvas id="spec" role="img" aria-label="Spectre du signal"></canvas><div class="tip" id="specTip"></div></div>
+        <div class="fig__head" style="margin:.4rem 0 0"><div class="legend" id="specLegend"></div></div>
+        <p class="fig__cap">Passez la souris (ou le doigt) sur le spectre pour lire une fréquence. Les étiquettes marquent les pics les plus forts de la zone affichée.</p>
+      </figure>
+
+      <div class="tabs" role="tablist" aria-label="Ce que vous voulez essayer">
+        <button class="chip" type="button" role="tab" data-tab="analyse" aria-selected="true">Fréquences dominantes</button>
+        <button class="chip" type="button" role="tab" data-tab="bench" aria-selected="false">DFT naïve contre FFT</button>
+        <button class="chip" type="button" role="tab" data-tab="filtre" aria-selected="false">Retirer une fréquence</button>
+        <button class="chip" type="button" role="tab" data-tab="message" aria-selected="false">Cacher un message</button>
+      </div>
+
+      <div class="pane" id="p-analyse" role="tabpanel">
+        <div class="row">
+          <label class="field field--sm">N, le nombre de fréquences<input type="number" id="topN" min="1" max="100" value="5" inputmode="numeric"></label>
+        </div>
+        <div class="term" id="analyseOut" aria-live="polite"></div>
+        <div class="verdict" id="verdict"></div>
+      </div>
+
+      <div class="pane" id="p-bench" role="tabpanel" hidden>
+        <p>Les deux méthodes calculent le même spectre. Je les lance sur le début du signal choisi, avec des tailles de plus en plus grandes. Les temps sont mesurés ici, sur votre machine.</p>
+        <div class="row">
+          <button class="btn" type="button" id="benchGo">Lancer la comparaison</button>
+          <button class="btn btn--ghost" type="button" id="benchStop" hidden>Arrêter</button>
+        </div>
+        <table class="bench" id="benchTable">
+          <thead><tr><th>Points</th><th>DFT naïve</th><th>FFT</th><th>Gain</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <div class="verdict" id="benchVerdict"></div>
+      </div>
+
+      <div class="pane" id="p-filtre" role="tabpanel" hidden>
+        <p>Usage de la FFT inverse : je passe en fréquences, je mets à zéro les cases à retirer, puis je reviens au son. Cliquez sur un pic du spectre pour ajouter sa fréquence à la liste.</p>
+        <div class="row">
+          <label class="field">Fréquences à retirer (Hz, séparées par des points-virgules)<input type="text" id="notchList" placeholder="50 ; 150 ; 250"></label>
+          <label class="field field--sm">Largeur (± Hz)<input type="number" id="notchWidth" min="0.5" max="500" step="0.5" value="4"></label>
+          <button class="btn" type="button" id="notchGo">Retirer</button>
+          <button class="btn btn--ghost" type="button" id="notchReset" hidden>Annuler</button>
+        </div>
+        <div class="verdict" id="notchVerdict"></div>
+        <div id="notchResult" hidden>
+          <div class="row" style="margin-top:.9rem">
+            <label class="field">Écouter après le filtrage<audio id="playerAfter" controls preload="none"></audio></label>
+            <a class="btn btn--ghost" id="notchDl" download="signal-filtre.wav" href="#">Télécharger le WAV</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="pane" id="p-message" role="tabpanel" hidden>
+        <p>Le message est écrit dans des fréquences très aiguës, vers 18 kHz, presque inaudibles. Une lettre par tranche de 4096 points. Caractères acceptés, comme dans le programme : lettres sans accent, chiffres et espace.</p>
+        <div class="row">
+          <label class="field">Message à cacher<input type="text" id="msgIn" value="BONJOUR 42" maxlength="60" autocomplete="off" spellcheck="false"></label>
+          <button class="btn" type="button" id="msgHide">Cacher</button>
+          <button class="btn btn--ghost" type="button" id="msgFind">Retrouver le message</button>
+        </div>
+        <div class="term" id="msgOut" aria-live="polite"><span class="t-dim">Cachez un message, ou cherchez-en un dans le signal affiché.</span></div>
+        <div id="msgResult" hidden>
+          <figure class="fig" style="margin-top:1rem">
+            <div class="fig__head"><h3>Ce que lit le décodeur, tranche par tranche</h3></div>
+            <div class="fig__plot fig__plot--heat"><canvas id="heat" role="img" aria-label="Force des 39 fréquences surveillées, pour chaque tranche du signal"></canvas><div class="tip" id="heatTip"></div></div>
+            <p class="fig__cap">Une colonne par tranche de 4096 points, une ligne par fréquence surveillée (39 en tout). Une case claire = la fréquence dépasse le seuil : c'est un caractère. ▸ marque le début, ■ la fin.</p>
+          </figure>
+          <div class="row">
+            <a class="btn btn--ghost" id="msgDl" download="out.wav" href="#">Télécharger le WAV avec le message</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <span class="label">Signal</span>
+      <div class="drop">
+        <button class="btn btn--ghost" type="button" id="fileBtn">Choisir un fichier WAV</button>
+        <input type="file" id="fileIn" accept=".wav,audio/wav,audio/x-wav" hidden>
+        <div>ou glissez-le sur ce cadre. Il reste dans votre navigateur.</div>
+      </div>
+
+      <div class="side-block" id="dtmfBlock" hidden>
+        <span class="label">Appuyez sur une touche</span>
+        <div class="pad" id="pad"></div>
+        <p>Chaque touche joue deux notes à la fois. Le spectre montre les deux pics, et la démo en déduit la touche.</p>
+      </div>
+
+      <div class="side-block" id="motorBlock" hidden>
+        <span class="label">État du moteur</span>
+        <div class="chips">
+          <button class="chip" type="button" data-motor="ok" aria-pressed="false">Sain</button>
+          <button class="chip" type="button" data-motor="bad" aria-pressed="true">Roulement abîmé</button>
+        </div>
+        <p>La ligne grise du spectre est l'enregistrement de référence, celui du moteur sain.</p>
+      </div>
+
+      <label class="field">Écouter le signal<audio id="player" controls preload="none"></audio></label>
+
+      <div class="stats">
+        <div class="stat"><b id="stN">–</b><span>échantillons</span></div>
+        <div class="stat"><b id="stDur">–</b><span>durée</span></div>
+        <div class="stat"><b id="stRate">–</b><span>échantillons par seconde</span></div>
+        <div class="stat"><b id="stSize">–</b><span>taille de la transformée</span></div>
+        <div class="stat"><b id="stMethod">–</b><span>méthode utilisée</span></div>
+        <div class="stat"><b id="stTime">–</b><span>temps de calcul mesuré</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Choisissez un signal.</b> <code>test.wav</code> est le vrai fichier de test du projet : une note pure. Le spectre montre un seul pic, à 440 Hz, et la liste des fréquences dominantes dit la même chose.</span></li>
+      <li><span><b>Ouvrez « Clavier téléphonique » et appuyez sur une touche.</b> Vous entendez la tonalité. Deux pics apparaissent, et la démo retrouve la touche.</span></li>
+      <li><span><b>Ouvrez « DFT naïve contre FFT » et lancez la comparaison.</b> Regardez la barre bleue grandir pendant que la barre de la FFT reste presque invisible. C'est le moment que je préfère.</span></li>
+      <li><span><b>Choisissez « Ronflette 50 Hz », puis « Retirer une fréquence ».</b> Écoutez avant, cliquez sur « Retirer », écoutez après. Le bourdonnement a disparu, la mélodie est restée.</span></li>
+      <li><span><b>Ouvrez « Cacher un message ».</b> Tapez un mot, cachez-le, puis retrouvez-le. Vous pouvez télécharger le WAV : il s'écoute comme l'original. Vous pouvez aussi déposer votre propre fichier WAV et tout refaire avec.</span></li>
+    </ol>
+
+    <h3 style="margin-top:2.2rem">Ce que j'ai ajouté pour le web</h3>
+    <ul class="addons">
+      <li>Les graphiques, l'écoute et le téléchargement. Le programme d'origine est en ligne de commande : il affiche du texte et écrit des fichiers.</li>
+      <li>Trois signaux de synthèse, fabriqués par le code de la page : clavier téléphonique, moteur, ronflette. Ce ne sont pas des enregistrements.</li>
+      <li>La lecture « métier » du spectre : touche retrouvée, bande anormale du moteur, étiquettes des pics.</li>
+      <li>L'outil « Retirer une fréquence ». Dans le projet, la FFT inverse sert à cacher le message ; ici je lui donne un second usage.</li>
+      <li>Les fichiers stéréo ou à une autre cadence que 48 000 Hz sont acceptés. Le programme d'origine les refuse, et la page vous le dit.</li>
+    </ul>
+  </div>
+
+  <div class="how">
+    <h2>Comment ça marche</h2>
+    <p>Un fichier WAV, c'est un petit en-tête puis une longue liste de nombres : la position de la membrane du haut-parleur, 48 000 fois par seconde. Je lis l'en-tête octet par octet, puis les nombres.</p>
+    <p>La transformée de Fourier répond à une question : « combien y a-t-il de 440 Hz dans ce son ? », et pareil pour toutes les autres fréquences.</p>
+
+    <h3>D'abord la version naïve</h3>
+    <p>Pour chaque fréquence, je relis tous les points du signal et j'additionne. Avec N points, il y a N fréquences à tester : N × N calculs. Si le signal double, le temps est multiplié par quatre.</p>
+
+    <h3>Puis la version rapide : Cooley-Tukey</h3>
+    <p>L'idée : un spectre de N points se construit à partir de deux spectres de N/2 points. On coupe donc en deux, encore et encore. Dans mon code, il n'y a pas de récursion : je range d'abord les points dans le bon ordre (inversion des bits de l'indice), puis je les combine par groupes de 2, de 4, de 8… Il ne reste que N × log₂ N calculs.</p>
+
+    <figure class="schema">
+      <svg viewBox="0 0 440 196" role="img" aria-label="Pour 16 points, la version naïve fait 256 calculs, la FFT en fait 64.">
+        <defs>
+          <pattern id="pa" width="9" height="9" patternUnits="userSpaceOnUse"><circle class="dot-a" cx="4.5" cy="4.5" r="2.4"/></pattern>
+          <pattern id="pb" width="9" height="9" patternUnits="userSpaceOnUse"><circle class="dot-b" cx="4.5" cy="4.5" r="2.4"/></pattern>
+        </defs>
+        <text x="0" y="14" font-size="12" font-weight="600">Naïve : 16 × 16</text>
+        <rect x="0" y="27" width="144" height="144" fill="url(#pa)"/>
+        <text class="big" x="0" y="192" font-size="17">256 calculs</text>
+        <text x="225" y="14" font-size="12" font-weight="600">FFT : 16 × 4 étapes</text>
+        <rect x="225" y="27" width="144" height="36" fill="url(#pb)"/>
+        <text x="375" y="34.5" font-size="8">par 2</text>
+        <text x="375" y="43.5" font-size="8">par 4</text>
+        <text x="375" y="52.5" font-size="8">par 8</text>
+        <text x="375" y="61.5" font-size="8">par 16</text>
+        <text class="big" x="225" y="86" font-size="17">64 calculs</text>
+      </svg>
+      <figcaption>Avec 16 points, l'écart est déjà de 1 à 4. Avec 8192 points : 67 millions de calculs contre 106 000. Chaque point du dessin est un calcul.</figcaption>
+    </figure>
+
+    <h3>Les fréquences dominantes</h3>
+    <p>Comme le programme d'origine : jusqu'à 8192 points, il utilise la version naïve, qui garde la taille exacte du signal. Au-delà, il complète avec des zéros jusqu'à la puissance de 2 suivante et lance la FFT. Il ignore la case 0 (la moyenne), garde la première moitié du spectre, trie par force et affiche les N premières. La sortie de l'onglet est celle du programme, au caractère près.</p>
+
+    <h3>Le message caché</h3>
+    <p>Je découpe le son en tranches de 4096 points. Pour chaque caractère : FFT de la tranche, je renforce une seule case (la case 1540 pour A, 1541 pour B…), puis FFT inverse pour revenir au son. Une tranche « début » ouvre le message, une tranche « fin » le ferme.</p>
+    <figure class="schema">
+      <div class="frames" aria-label="Exemple : les tranches pour le message OK">
+        <span class="mk">début</span><span>O</span><span>K</span><span class="mk">fin</span><span class="rest">le reste du son, inchangé</span>
+      </div>
+      <figcaption>Pour relire : FFT de chaque tranche, et je regarde quelle case dépasse le seuil. Les minuscules reviennent en majuscules.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Maintenance prédictive</h3><p>Un roulement qui s'abîme change le spectre des vibrations avant de casser. Comparer le spectre à une référence permet d'intervenir à temps.</p></div>
+    <div><h3>Téléphonie et serveurs vocaux</h3><p>« Tapez 1 pour… » : le serveur reconnaît la touche avec le même calcul que cette page.</p></div>
+    <div><h3>Nettoyage audio et mesure</h3><p>Retirer la ronflette du secteur d'un enregistrement, ou repérer un parasite sur un capteur.</p></div>
+    <div><h3>Marquage de fichiers</h3><p>Cacher une information dans un son sert à tracer une copie ou à signer un contenu.</p></div>
+    <div><h3>Choisir le bon algorithme</h3><p>Le même résultat, des milliers de fois plus vite. C'est souvent là que se joue le coût d'un traitement de données.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur : votre fichier n'est envoyé nulle part.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

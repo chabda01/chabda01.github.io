@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Un tableau de bord à widgets configurables, à tester dans le navigateur : ajoutez, réglez, déplacez des widgets et regardez chacun se rafraîchir à son rythme. Données d'exemple fictives.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ─────
+   Les couleurs du vrai dashboard (globals.css) sont reprises par rôle :
+   fond, surface, bordure, texte, et une couleur par service. */
+.dz{
+  --d-bg:#0F0D0A; --d-surface:var(--stage-2); --d-border:var(--stage-line);
+  --d-fg:var(--stage-ink); --d-soft:var(--stage-ink-2); --d-muted:var(--stage-ink-3); --d-danger:var(--bad);
+  --a-weather:#38bdf8; --a-github:#22c55e; --a-rss:#fb923c; --a-hackernews:#2dd4bf;
+  --a-currency:#f59e0b; --a-gmail:#fb7185; --a-primary:var(--gold);
+  color-scheme:dark;
+}
+.dz *{scrollbar-width:thin; scrollbar-color:#4A4338 transparent}
+.dz [data-accent="weather"]{--acc:var(--a-weather)} .dz [data-accent="github"]{--acc:var(--a-github)}
+.dz [data-accent="rss"]{--acc:var(--a-rss)} .dz [data-accent="hackernews"]{--acc:var(--a-hackernews)}
+.dz [data-accent="currency"]{--acc:var(--a-currency)} .dz [data-accent="gmail"]{--acc:var(--a-gmail)}
+.dz [data-accent="primary"]{--acc:var(--a-primary)}
+.dz .trunc{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.dz .ic{width:1rem; height:1rem; flex:none}
+.dz .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap}
+.dz [hidden]{display:none !important}
+
+/* la scène : le côté reste visible pendant qu'on fait défiler les cartes */
+#stage{overflow:visible}
+#stage .stage__side{border-radius:0 6px 6px 0}
+.side-in{position:sticky; top:72px; display:flex; flex-direction:column; gap:1.1rem}
+.side-in > div{display:flex; flex-direction:column; gap:.55rem}
+.side-in p{font-size:.8rem}
+.side-in .btn{font-size:.8rem; padding:.45rem .85rem}
+.side-row{display:flex; flex-wrap:wrap; gap:.4rem}
+.stats{grid-template-columns:1fr 1fr; gap:.5rem}
+.stats .stat{padding:.55rem .65rem}
+.stats .stat b{font-size:1.35rem}
+.stats .stat span{display:block; line-height:1.3; margin-top:.15rem}
+#log{height:232px; font-size:.7rem; line-height:1.55; padding:.6rem .7rem; overflow-wrap:anywhere}
+#log div{padding:.12rem 0}
+#log .sep{color:var(--gold); padding:.3rem 0}
+.stage__bar{margin-bottom:.8rem}
+.fake-tag{font-size:.66rem; letter-spacing:.09em; text-transform:uppercase; padding:.12rem .5rem; border-radius:3px;
+  color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold); white-space:nowrap}
+.stage__status{min-height:1.2em; text-align:right}
+@media (max-width:860px){ #stage .stage__side{border-radius:0 0 6px 6px} .side-in{position:static} }
+@media (max-height:780px){ .side-in{position:static} }
+
+/* ───── l'application ───── */
+.app{container-type:inline-size; background:var(--d-bg); border-radius:10px; box-shadow:inset 0 0 0 1px var(--d-border);
+  font-size:.875rem; line-height:1.45; color:var(--d-fg)}
+.app__head{display:flex; flex-wrap:wrap; align-items:center; gap:.6rem .75rem; padding:.75rem 1rem;
+  background:var(--d-surface); border-radius:10px 10px 0 0; box-shadow:inset 0 0 0 1px var(--d-border)}
+.app__brand{display:flex; align-items:center; gap:.5rem; margin-right:auto; font-size:1rem; font-weight:600; letter-spacing:-.015em}
+.app__brand svg{width:30px; height:30px}
+.app__head .btn{border-radius:8px; padding:.4rem .75rem; font-size:.875rem}
+.app__body{padding:1rem}
+.app__note{font-size:.875rem; color:var(--d-muted); padding:.25rem 0}
+.app__alert{display:flex; align-items:flex-start; justify-content:space-between; gap:.75rem; margin-bottom:1rem; padding:.75rem;
+  border-radius:8px; color:var(--d-danger); background:rgba(224,119,95,.1); box-shadow:inset 0 0 0 1px rgba(224,119,95,.4)}
+.app__empty{margin-bottom:1rem; padding:1rem; border-radius:8px; border:1px dashed var(--d-border); color:var(--d-muted)}
+.linkbtn{font:inherit; color:var(--gold); background:none; border:0; padding:0; cursor:pointer}
+.linkbtn:hover,.linkbtn:focus-visible{text-decoration:underline; outline:none}
+.app__alert .linkbtn{color:var(--d-danger); flex:none}
+.grid{display:grid; gap:1rem; grid-template-columns:minmax(0,1fr)}
+@container (min-width:600px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@container (min-width:1000px){ .grid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+
+/* ───── une carte ───── */
+.wcard{position:relative; display:flex; flex-direction:column; height:18rem; min-height:160px; min-width:0; padding:1rem;
+  border-radius:12px; background:var(--d-surface); box-shadow:inset 0 0 0 1px var(--d-border),0 1px 2px rgba(0,0,0,.2);
+  cursor:grab; outline:none; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none}
+.wcard:hover{box-shadow:inset 0 0 0 1px rgba(141,132,119,.42),0 1px 2px rgba(0,0,0,.2)}
+.wcard:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.wcard.is-shift{transition:transform .2s ease}
+.wcard.is-drag{opacity:.5; z-index:30; cursor:grabbing}
+.wcard.is-drag.is-key{transition:transform .2s ease}
+.wcard.is-held{box-shadow:inset 0 0 0 2px var(--gold)}
+.wcard.has-menu{z-index:5}
+body.dz-dragging{user-select:none; -webkit-user-select:none; cursor:grabbing}
+.wcard__head{display:flex; align-items:flex-start; justify-content:space-between; gap:.5rem}
+.wcard__id{display:flex; min-width:0; align-items:center; gap:.625rem}
+.wcard__ico{display:grid; place-items:center; width:2rem; height:2rem; flex:none; border-radius:8px; color:var(--acc);
+  background:color-mix(in srgb,var(--acc) 10%,transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 25%,transparent)}
+.wcard__names{min-width:0}
+.wcard__title{font-size:.875rem; font-weight:600; color:var(--d-fg)}
+.wcard__sub{font-size:.75rem; color:var(--d-muted)}
+.wcard__menu{position:relative; flex:none}
+.wcard__dots{display:grid; place-items:center; width:1.75rem; height:1.75rem; margin-right:-.25rem; border-radius:6px;
+  color:var(--d-muted); background:none; border:0; cursor:pointer}
+.wcard__dots:hover{background:var(--d-bg); color:var(--d-fg)}
+.wcard__dots:focus-visible,.menu button:focus-visible{outline:2px solid var(--gold); outline-offset:1px}
+.menu{position:absolute; right:0; z-index:10; width:11rem; margin-top:.25rem; padding:.25rem; border-radius:8px;
+  background:var(--d-surface); box-shadow:0 0 0 1px var(--d-border),0 20px 25px -5px rgba(0,0,0,.55)}
+.menu button{display:block; width:100%; padding:.5rem .75rem; border-radius:6px; text-align:left; font:inherit; font-size:.875rem;
+  color:var(--d-fg); background:none; border:0; cursor:pointer}
+.menu button:hover{background:var(--d-bg)}
+.menu .is-danger{color:var(--d-danger)}
+.wcard__body{position:relative; min-height:0; flex:1; overflow:auto; margin-top:.75rem}
+.wbar{position:absolute; left:14px; right:14px; bottom:0; height:2px; overflow:hidden; border-radius:2px}
+.wbar i{display:block; width:100%; height:100%; background:var(--acc); opacity:.75; transition:width 1s linear}
+
+/* ───── contenu d'un widget ───── */
+.live{display:flex; flex-direction:column; gap:.5rem; height:100%; min-height:0; font-size:.875rem}
+.live__scroll{position:relative; min-height:0; flex:1; overflow-y:auto; padding-right:.25rem}
+.live__err{flex:none; font-size:.75rem; color:var(--d-danger)}
+.live__foot{display:flex; flex:none; align-items:center; gap:.375rem; padding-top:.5rem; font-size:11px; color:var(--d-muted);
+  box-shadow:inset 0 1px 0 var(--d-border); font-variant-numeric:tabular-nums}
+.live__next{margin-left:auto}
+.dot{width:.375rem; height:.375rem; flex:none; border-radius:50%; background:var(--a-github)}
+.dot.is-bad{background:var(--d-danger)}
+.live__foot.is-new .dot{animation:dzping .9s ease-out}
+@keyframes dzping{0%{box-shadow:0 0 0 0 rgba(34,197,94,.7)} 100%{box-shadow:0 0 0 9px rgba(34,197,94,0)}}
+.muted{color:var(--d-muted)}
+.werr{display:flex; flex-direction:column; gap:.5rem; font-size:.875rem}
+.werr__msg{color:var(--d-danger)}
+.werr .linkbtn{width:fit-content}
+.werr ul{list-style:none; margin:0; padding:.5rem; display:grid; gap:.25rem 1rem; max-height:9rem; overflow-y:auto; border-radius:8px;
+  font-size:.75rem; background:rgba(15,13,10,.5); box-shadow:inset 0 0 0 1px var(--d-border)}
+.werr li{display:flex; align-items:baseline; gap:.5rem}
+.werr code{width:2rem; flex:none; font-family:"JetBrains Mono",ui-monospace,monospace; font-weight:600; color:var(--a-currency)}
+.tile{border-radius:8px; background:rgba(15,13,10,.5); box-shadow:inset 0 0 0 1px var(--d-border)}
+.lbl{font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.05em; color:var(--d-muted)}
+.num{font-variant-numeric:tabular-nums}
+
+/* horloge */
+.wk{display:flex; flex-direction:column; gap:.5rem; min-height:100%}
+.wk__box{display:flex; flex:1; flex-direction:column; justify-content:center; padding:.75rem 1rem}
+.wk__time{display:flex; align-items:baseline; gap:.375rem; font-variant-numeric:tabular-nums}
+.wk__time b{font-size:3rem; font-weight:600; line-height:1; color:var(--d-fg)}
+.wk__time span{font-size:1.25rem; font-weight:500; color:var(--gold)}
+.wk__date{margin-top:.5rem; font-size:.875rem; color:var(--d-muted)}
+.wk__date::first-letter{text-transform:uppercase}
+.wk__geo{display:flex; align-items:center; gap:.375rem; font-size:.875rem; color:var(--d-muted)}
+.wk__geo .ic{color:var(--gold)}
+
+/* météo */
+.wt{display:flex; flex-direction:column; gap:.5rem; min-height:100%}
+.wt__main{display:flex; flex:1; align-items:center; justify-content:space-between; gap:.75rem; padding:.625rem 1rem}
+.wt__main > div{min-width:0}
+.wt__t{display:flex; align-items:flex-start; gap:.25rem; font-size:2.25rem; font-weight:600; line-height:1; color:var(--d-fg); font-variant-numeric:tabular-nums}
+.wt__t span{margin-top:.125rem; font-size:1rem; font-weight:500; color:var(--d-muted)}
+.wt__feel{margin-top:.5rem; font-size:.75rem; font-weight:500; color:var(--a-weather); font-variant-numeric:tabular-nums}
+.wt__main .ic{width:3rem; height:3rem; color:var(--a-weather)}
+.wt__hum{padding:.5rem .75rem}
+.wt__hum > div:first-child{display:flex; align-items:center; justify-content:space-between; gap:.5rem}
+.wt__hum .lbl{display:flex; align-items:center; gap:.25rem}
+.wt__hum .lbl .ic{width:.75rem; height:.75rem}
+.wt__hum b{font-size:.875rem; font-weight:600; font-variant-numeric:tabular-nums}
+.meter{height:.25rem; margin-top:.375rem; overflow:hidden; border-radius:999px; background:var(--d-border)}
+.meter i{display:block; height:100%; border-radius:999px; background:var(--a-weather)}
+.wf{list-style:none; margin:0; padding:0; display:grid; grid-auto-flow:column; grid-auto-columns:minmax(0,1fr); gap:.375rem; min-height:100%}
+.wf li{display:flex; min-width:0; flex-direction:column; align-items:center; justify-content:center; gap:.25rem; padding:.5rem .25rem; text-align:center}
+.wf .ic{width:1.25rem; height:1.25rem; color:var(--a-weather)}
+.wf b{font-size:.875rem; font-weight:600; font-variant-numeric:tabular-nums}
+.wf .min{font-size:.75rem; color:var(--d-muted); font-variant-numeric:tabular-nums}
+.wf .rain{display:flex; align-items:center; gap:.125rem; height:.875rem; font-size:10px; color:var(--a-weather); font-variant-numeric:tabular-nums}
+.wf .rain .ic{width:.625rem; height:.625rem}
+.wf .more{display:none}
+
+/* listes : articles, Hacker News */
+.wl{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.375rem}
+.wl li{padding:.5rem .75rem}
+.wl a{color:var(--d-fg); text-decoration:none; line-height:1.375; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.wl a:hover,.wl a:focus-visible{color:var(--acc); outline:none}
+.wl__meta{display:flex; flex-wrap:wrap; align-items:center; gap:.25rem .75rem; margin-top:.375rem; font-size:11px; color:var(--d-muted)}
+.wl__meta .ic{width:.75rem; height:.75rem}
+.wl__meta a,.wl__meta span{display:inline-flex; align-items:center; gap:.25rem; color:inherit}
+.wl__pts{padding:.125rem .375rem; border-radius:4px; font-weight:500; color:var(--acc) !important; background:color-mix(in srgb,var(--acc) 10%,transparent); gap:.125rem !important; font-variant-numeric:tabular-nums}
+.wl__when{font-weight:500; color:var(--acc) !important}
+
+/* listes à lignes : commits, mails, historique */
+.wr{list-style:none; margin:0; padding:0; display:flex; flex-direction:column}
+.wr li{display:flex; align-items:center; gap:.625rem; padding:.5rem 0; box-shadow:inset 0 1px 0 var(--d-border)}
+.wr li:first-child{padding-top:0; box-shadow:none}
+.wr li:last-child{padding-bottom:0}
+.wr li > .ic{color:var(--acc)}
+.wr__txt{min-width:0; flex:1}
+.wr__txt div{font-size:.875rem; color:var(--d-fg)}
+.wr__txt small{display:block; font-size:.75rem; color:var(--d-muted)}
+.wr code{flex:none; padding:.125rem .375rem; border-radius:4px; font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11px;
+  color:var(--acc); background:color-mix(in srgb,var(--acc) 10%,transparent)}
+.wm a{display:flex; align-items:flex-start; gap:.625rem; flex:1; min-width:0; color:inherit; text-decoration:none}
+.wm a:hover{opacity:.75}
+.wm a > .ic{margin-top:.125rem; color:var(--a-gmail)}
+.wm__top{display:flex; align-items:baseline; justify-content:space-between; gap:.5rem}
+.wm__top div{font-weight:500}
+.wm__top time{flex:none; font-size:.75rem; color:var(--d-muted)}
+
+/* GitHub : activité */
+.wa{display:flex; flex-direction:column; gap:.75rem; min-height:100%}
+.wa dl{display:grid; flex:1; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; margin:0}
+.wa dl > div{display:flex; min-width:0; flex-direction:column; justify-content:center; gap:.375rem; padding:.625rem}
+.wa dt{display:flex; align-items:center; gap:.25rem}
+.wa dt .ic{width:.75rem; height:.75rem; color:var(--a-github)}
+.wa dd{margin:0; white-space:nowrap; font-size:1.25rem; font-weight:600; font-variant-numeric:tabular-nums}
+.wa__br{display:flex; align-items:center; gap:.375rem; font-size:.75rem; color:var(--d-muted)}
+.wa__br .ic{width:.875rem; height:.875rem; color:var(--a-github)}
+.wa__br code{padding:.125rem .375rem; border-radius:4px; font-family:"JetBrains Mono",ui-monospace,monospace; color:var(--d-fg); background:rgba(15,13,10,.5)}
+
+/* devises */
+.wx{display:flex; min-height:100%; flex-direction:column; justify-content:center; gap:.5rem; padding:.75rem 1rem}
+.wx__v{display:flex; flex-wrap:wrap; align-items:baseline; gap:0 .5rem; font-variant-numeric:tabular-nums}
+.wx__v b{font-size:1.875rem; font-weight:600}
+.wx__v span{font-size:1.125rem; font-weight:500; color:var(--a-currency)}
+.wx__d{font-size:.75rem; color:var(--d-muted)}
+.wh{display:flex; flex-direction:column; gap:.75rem}
+.wh__sum{padding:.5rem .75rem}
+.wh__top{display:flex; align-items:center; justify-content:space-between; gap:.5rem; font-weight:600}
+.wh__chg{display:flex; align-items:center; gap:.25rem; font-size:.75rem; font-weight:500; font-variant-numeric:tabular-nums; color:var(--a-github)}
+.wh__chg.is-down{color:var(--d-danger)}
+.wh__chg .ic{width:.875rem; height:.875rem}
+.wh svg.spark{display:block; width:100%; height:3rem; color:var(--a-currency)}
+.wh__mm{display:flex; justify-content:space-between; font-size:11px; color:var(--d-muted); font-variant-numeric:tabular-nums}
+.wh .wr li{justify-content:space-between; align-items:baseline; padding:.375rem 0; font-size:.75rem}
+.wh .wr li span:first-child{color:var(--d-muted)}
+
+/* ───── plein écran ───── */
+.dz-back{position:fixed; inset:0; z-index:40; background:rgba(0,0,0,.6)}
+.dz-full{position:fixed; inset:1.5rem; z-index:50; display:flex; flex-direction:column; padding:1.5rem; border-radius:12px;
+  background:var(--d-surface); color:var(--d-fg); box-shadow:0 0 0 1px var(--d-border),0 25px 50px -12px rgba(0,0,0,.7); font-size:.875rem; line-height:1.45}
+@media (min-width:640px){ .dz-full{inset:2.5rem} }
+@media (max-width:480px){ .dz-full{inset:.75rem; padding:1rem} }
+.dz-full .wcard__title{font-size:1.125rem}
+.dz-full .wcard__sub{font-size:.875rem}
+.dz-full .wcard__body{margin-top:1.25rem}
+.is-x .wk__box,.is-x.wx{align-items:center; text-align:center; padding:clamp(1.5rem,6vh,4rem) 1.5rem}
+.is-x .wk__time b{font-size:clamp(3.5rem,13vw,8rem)}
+.is-x .wk__time span{font-size:clamp(1.4rem,4vw,3rem)}
+.is-x .wk__date{margin-top:1.25rem; font-size:clamp(1rem,2.4vw,1.5rem)}
+.is-x .wk__geo{justify-content:center; font-size:1.05rem}
+.is-x.wt{display:grid; align-content:center; gap:1rem}
+.is-x .wt__main,.is-x .wt__hum{padding:clamp(1.25rem,4vw,2.5rem) clamp(1.25rem,4vw,2rem)}
+.is-x .wt__t{font-size:clamp(4rem,12vw,8rem)} .is-x .wt__t span{font-size:clamp(1.4rem,3vw,2.25rem); margin-top:.5rem}
+.is-x .wt__feel{margin-top:1.25rem; font-size:1.25rem} .is-x .wt__cond{font-size:clamp(1.3rem,3vw,1.9rem)}
+.is-x .wt__main .ic{width:clamp(5rem,14vw,10rem); height:clamp(5rem,14vw,10rem); stroke-width:1.25}
+.is-x .wt__hum b{font-size:clamp(2rem,6vw,3.75rem)} .is-x .wt__hum .lbl{font-size:.875rem} .is-x .meter{height:.5rem; margin-top:1rem}
+.is-x .wt__hum > div:first-child{flex-direction:column; align-items:flex-start; gap:1rem}
+@media (min-width:1024px){ .is-x.wt{grid-template-columns:2fr 1fr} .dz .is-x.wl,.dz .is-x.wr{grid-template-columns:repeat(2,minmax(0,1fr))} .is-x.wh{grid-template-columns:minmax(0,3fr) minmax(0,2fr)} }
+.is-x.wf{gap:1rem; align-items:center}
+.is-x.wf li{gap:.75rem; padding:clamp(1rem,5vh,2.5rem) .5rem}
+.is-x.wf .lbl{font-size:.875rem} .is-x.wf .ic{width:clamp(2rem,6vw,5rem); height:clamp(2rem,6vw,5rem)}
+.is-x.wf b{font-size:clamp(1.4rem,4.5vw,3rem)} .is-x.wf .min{font-size:clamp(1rem,2.4vw,1.5rem)}
+.is-x.wf .more{display:block; font-size:.875rem; color:var(--d-soft)} .is-x.wf .rain{height:1.25rem; font-size:.875rem} .is-x.wf .rain .ic{width:.875rem; height:.875rem}
+.is-x.wl,.is-x.wr{display:grid; align-content:start; gap:.75rem; grid-template-columns:minmax(0,1fr)}
+.is-x.wl li{padding:1rem 1.25rem} .is-x.wl li > a{font-size:1.125rem; -webkit-line-clamp:3} .is-x.wl .wl__meta{margin-top:1rem; font-size:.875rem}
+.is-x.wr li{gap:1rem; padding:1rem 1.25rem; border-radius:8px; background:rgba(15,13,10,.5); box-shadow:inset 0 0 0 1px var(--d-border)}
+.is-x.wr li > .ic,.is-x.wm a > .ic{width:1.5rem; height:1.5rem}
+.is-x.wr .wr__txt div{font-size:1.125rem} .is-x.wr .wr__txt small{margin-top:.25rem; font-size:.875rem} .is-x.wr code{font-size:.875rem; padding:.25rem .5rem}
+.is-x.wa{justify-content:center; gap:1.5rem}
+.is-x.wa dl{flex:none; gap:1rem} .is-x.wa dl > div{align-items:center; gap:1rem; padding:clamp(1.5rem,7vh,3.5rem) 1rem; text-align:center}
+.is-x.wa dt{font-size:.875rem} .is-x.wa dt .ic{width:1rem; height:1rem} .is-x.wa dd{font-size:clamp(1.8rem,7vw,6rem)}
+.is-x.wa .wa__br{justify-content:center; font-size:1rem}
+.is-x.wx{gap:1rem} .is-x.wx .lbl{font-size:.875rem} .is-x .wx__v{justify-content:center; gap:0 1rem}
+.is-x .wx__v b{font-size:clamp(2.6rem,11vw,8rem)} .is-x .wx__v span{font-size:clamp(1.4rem,4vw,3rem)} .is-x .wx__d{font-size:1.125rem}
+.is-x.wh{display:grid; align-content:start; align-items:start; gap:1rem}
+.is-x .wh__sum{padding:1.25rem 1.5rem} .is-x .wh__top{font-size:1.5rem} .is-x .wh__chg{font-size:1.25rem} .is-x .wh__chg .ic{width:1.25rem; height:1.25rem}
+.is-x.wh svg.spark{height:clamp(8rem,34vh,20rem); margin:1rem 0} .is-x .wh__mm{font-size:1rem}
+.is-x.wh .wh__list{padding:1rem 1.5rem} .is-x.wh .wh__list li{padding:.75rem 0; font-size:1rem; border-radius:0; background:none; box-shadow:inset 0 1px 0 var(--d-border)}
+.is-x.wh .wh__list li:first-child{box-shadow:none}
+
+/* ───── fenêtre d'ajout / de réglage ───── */
+.dz-modal{position:fixed; left:50%; top:50%; z-index:60; width:calc(100% - 1.5rem); max-width:28rem; max-height:calc(100dvh - 1.5rem);
+  overflow-y:auto; transform:translate(-50%,-50%); padding:1.5rem; border-radius:16px; outline:none; font-size:.875rem; line-height:1.45;
+  background:var(--d-surface); color:var(--d-fg); box-shadow:0 0 0 1px var(--d-border),0 25px 50px -12px rgba(0,0,0,.7)}
+.dz-back.is-modal{z-index:55}
+.dz-modal h2{font-family:"Instrument Sans",system-ui,sans-serif; font-size:1.125rem; font-weight:600; letter-spacing:-.01em; line-height:1.3; color:var(--d-fg)}
+.dz-modal .tag{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.75rem; letter-spacing:.1em; color:var(--d-muted)}
+.pick{display:grid; grid-template-columns:1fr; gap:.5rem; margin-top:1rem}
+@media (min-width:640px){ .pick{grid-template-columns:1fr 1fr} }
+.pick button{padding:.75rem; border-radius:8px; text-align:left; font:inherit; cursor:pointer; color:inherit;
+  background:var(--d-bg); border:1px solid var(--d-border); transition:border-color .15s}
+.pick button:hover,.pick button:focus-visible{border-color:var(--gold); outline:none}
+.pick b{display:block; font-size:.875rem; font-weight:500; color:var(--acc)}
+.pick span{display:block; margin-top:.25rem; font-size:.75rem; color:var(--d-muted)}
+.textbtn{font:inherit; font-size:.875rem; color:var(--d-muted); background:none; border:0; padding:0; cursor:pointer}
+.textbtn:hover,.textbtn:focus-visible{color:var(--d-fg); outline:none; text-decoration:underline}
+.form{display:flex; flex-direction:column; gap:.75rem; margin-top:1rem}
+.form > div{display:flex; flex-direction:column; gap:.25rem}
+.form label{font-size:.875rem; color:var(--d-muted)}
+.form input{font:inherit; font-size:1rem; color:var(--d-fg); background:var(--d-bg); border:1px solid var(--d-border); border-radius:8px;
+  padding:.5rem .75rem; outline:none; width:100%}
+.form input:focus{border-color:var(--gold); box-shadow:0 0 0 2px rgba(233,168,85,.3)}
+.form input.is-bad{border-color:var(--d-danger)}
+.form .err,.dz-modal .srv{font-size:.75rem; color:var(--d-danger)}
+.dz-modal .srv{margin-top:.75rem; font-size:.875rem}
+.form .ex{display:flex; flex-wrap:wrap; align-items:center; gap:.3rem; font-size:.7rem; color:var(--d-muted)}
+.form .ex button{font:inherit; font-size:.7rem; padding:.12rem .5rem; border-radius:999px; cursor:pointer; color:var(--d-soft); background:none; border:1px solid var(--d-border)}
+.form .ex button:hover,.form .ex button:focus-visible{color:var(--gold); border-color:var(--gold); outline:none}
+.dz-modal .acts{display:flex; justify-content:flex-end; align-items:center; gap:.5rem; margin-top:1.25rem}
+.dz-modal .acts .textbtn{padding:.5rem 1rem}
+.dz-modal .acts .btn{border-radius:8px; padding:.5rem 1rem; font-size:.875rem}
+
+@media (prefers-reduced-motion:reduce){
+  .wcard.is-shift,.wcard.is-drag.is-key,.wbar i{transition:none}
+  .live__foot.is-new .dot{animation:none}
+}
+
+/* ───── explications ───── */
+.schema{margin:1.2rem 0; padding:1rem 1.1rem; border-radius:6px; background:var(--surface); box-shadow:inset 0 0 0 1px var(--rule)}
+.schema svg{display:block; width:100%; height:auto; max-width:460px}
+.schema figcaption{font-size:.84rem; color:var(--ink-3); margin-top:.6rem}
+.schema text{font-family:"Instrument Sans",system-ui,sans-serif; fill:var(--ink-2); font-size:11px}
+.schema .t-b{fill:var(--ink); font-weight:600; font-size:12px}
+.schema .t-m{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:9.5px; fill:var(--ink-2)}
+.schema .bx{fill:var(--wash); stroke:var(--accent-quiet); stroke-width:1}
+.schema .bx2{fill:none; stroke:var(--ink-3); stroke-width:1; stroke-dasharray:4 3}
+.schema .ar{stroke:var(--ink-3); stroke-width:1.2; fill:none}
+.schema .t-a{fill:var(--accent); font-weight:600; font-size:10px; letter-spacing:.08em}
+.how h3{font-size:1rem; margin:1.4rem 0 .4rem}
+.how code,.steps code{font-family:"JetBrains Mono",ui-monospace,monospace; font-size:.82em; color:var(--ink)}
+.how ul{margin:.4rem 0 0; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.how li{margin-bottom:.35rem}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-WEB-500 · dashboard</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Web et produit</span>
+  <h1>Dashboard</h1>
+  <p class="demo-hero__lede">Un tableau de bord que l'on héberge soi-même. Chacun compose sa page avec des widgets : météo, GitHub, Hacker News, taux de change, flux RSS, Gmail. Chaque widget se rafraîchit à son propre rythme.</p>
+  <p class="demo-origin">Projet de 3<sup>e</sup> année, fait à deux. Ma part est le frontend, écrit en TypeScript avec Next.js, React et Tailwind. Le backend (API, base de données, connexion aux services) est le travail de mon binôme : il n'est pas branché ici. Cette page est une version web autonome de mon frontend, réécrite en JavaScript sans bibliothèque. Les widgets y lisent des données d'exemple fictives.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage dz" id="stage">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <span class="fake-tag">Données fictives</span>
+        <span class="stage__status" id="status" role="status">Chargement…</span>
+      </div>
+
+      <div class="app" id="app">
+        <div class="app__head">
+          <span class="app__brand">
+            <svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><g stroke="rgba(240,234,224,.25)" stroke-width="2.5" stroke-linecap="round"><path d="M32 32L32 52M32 32L49.3 42M32 32L49.3 22M32 32L32 12M32 32L14.7 22M32 32L14.7 42"/></g><g fill="#C98A3C"><rect x="26.5" y="46.5" width="11" height="11" rx="2.5"/><rect x="43.8" y="36.5" width="11" height="11" rx="2.5"/><rect x="43.8" y="16.5" width="11" height="11" rx="2.5"/><rect x="26.5" y="6.5" width="11" height="11" rx="2.5"/><rect x="9.2" y="16.5" width="11" height="11" rx="2.5"/><rect x="9.2" y="36.5" width="11" height="11" rx="2.5"/></g><circle cx="32" cy="32" r="8.5" fill="#E9A855"/><ellipse cx="29" cy="29" rx="2.6" ry="1.6" fill="#fff" fill-opacity=".55"/></svg>
+            DashBoard
+          </span>
+          <button class="btn" type="button" id="addBtn"><span aria-hidden="true">+</span> Ajouter un widget</button>
+        </div>
+        <div class="app__body">
+          <div class="app__alert" id="alert" role="alert" hidden><span id="alertMsg"></span><button class="linkbtn" type="button" id="alertClose">Fermer</button></div>
+          <div class="app__empty" id="empty" hidden>Ton dashboard n'a encore aucun widget. <button class="linkbtn" type="button" id="emptyAdd">Ajoute le premier</button>.</div>
+          <div class="app__note" id="loading">Chargement du dashboard...</div>
+          <div class="grid" id="grid"></div>
+          <div class="sr" id="live" aria-live="assertive"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <div class="side-in">
+        <div>
+          <span class="label">Tableau d'exemple</span>
+          <div class="chips" id="profiles" role="group" aria-label="Tableau d'exemple"></div>
+          <p id="profileNote"></p>
+          <div class="side-row">
+            <button class="btn btn--ghost" type="button" id="resetBtn">Tout réinitialiser</button>
+            <button class="btn btn--ghost" type="button" id="outageBtn" aria-pressed="false">Panne météo</button>
+          </div>
+        </div>
+        <div>
+          <span class="label">Depuis l'ouverture</span>
+          <div class="stats">
+            <div class="stat"><b id="sCalls">0</b><span>appels à l'API simulée</span></div>
+            <div class="stat"><b id="sWidgets">0</b><span>widgets sur le tableau</span></div>
+            <div class="stat"><b id="sMiss">0</b><span>lectures d'un service (simulé)</span></div>
+            <div class="stat"><b id="sHit">0</b><span>réponses tirées du cache</span></div>
+          </div>
+        </div>
+        <div>
+          <span class="label">Journal des appels</span>
+          <div class="term" id="log" tabindex="0" aria-label="Journal des appels simulés"></div>
+          <p>Ce sont les routes du vrai backend. Ici, un faux serveur écrit en JavaScript répond à sa place.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Regardez une carte se rafraîchir.</b> Chaque carte a son compte à rebours, en bas à droite. À zéro, une ligne <code>GET /dashboard/widgets/…/data</code> arrive dans le journal et l'heure « Actualisé à » change.</span></li>
+      <li><span><b>Ajoutez un widget.</b> Cliquez sur « + Ajouter un widget », choisissez « Température d'une ville », écrivez <code>Lyon</code> et mettez <code>10</code> secondes. La carte arrive en fin de tableau.</span></li>
+      <li><span><b>Trompez-vous exprès.</b> Tapez <code>Lyon69</code> : les chiffres sont refusés pendant la frappe. Ajoutez un taux de change vers <code>XOF</code> : le serveur répond 422 et la carte liste les devises disponibles, avec un bouton pour corriger.</span></li>
+      <li><span><b>Déplacez une carte.</b> Glissez-la sur une autre : elles échangent leur place. Au doigt, gardez l'appui un court instant avant de glisser. Au clavier : Tab, Espace, les flèches, puis Espace.</span></li>
+      <li><span><b>Ouvrez le menu « ••• ».</b> Agrandir, Reconfigurer (pour changer la ville ou le rythme), Supprimer. Rechargez la page : votre tableau est toujours là. « Tout réinitialiser » remet l'exemple de départ.</span></li>
+    </ol>
+    <p style="margin-top:1.2rem">Pour finir, cliquez sur « Panne météo ». Au prochain rafraîchissement, les cartes météo gardent leurs dernières données et affichent une alerte rouge.</p>
+  </div>
+
+  <div class="how">
+    <h2>Comment ça marche</h2>
+    <p>Le frontend ne connaît aucun widget à l'avance. Au chargement, il lit <code>GET /about.json</code> : la liste des services, des widgets et de leurs paramètres. Il construit le formulaire à partir de cette liste. J'y ajoute seulement les libellés en français et les valeurs par défaut.</p>
+    <p>Chaque carte donne son rythme à un <b>Timer</b> central. Quand le Timer sonne, la carte relit ses données. Si la lecture échoue, la carte garde ses dernières données et affiche l'erreur à côté.</p>
+
+    <figure class="schema">
+      <svg viewBox="0 0 460 190" role="img" aria-label="Schéma : la carte s'inscrit au Timer, le Timer déclenche une lecture auprès du serveur, le serveur répond depuis son cache ou interroge le service tiers.">
+        <defs><marker id="arw" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1l6 3-6 3" fill="none" stroke="currentColor" stroke-width="1.2" style="color:var(--ink-3)"/></marker></defs>
+        <text class="t-a" x="6" y="14">MA PART · LE FRONTEND</text>
+        <rect class="bx" x="6" y="24" width="120" height="46" rx="5"/>
+        <text class="t-b" x="66" y="43" text-anchor="middle">Carte (widget)</text>
+        <text x="66" y="59" text-anchor="middle">son rythme : 30 s</text>
+        <rect class="bx" x="6" y="118" width="120" height="46" rx="5"/>
+        <text class="t-b" x="66" y="137" text-anchor="middle">Timer central</text>
+        <text x="66" y="153" text-anchor="middle">un minuteur par carte</text>
+        <path class="ar" d="M46 72V116" marker-end="url(#arw)"/>
+        <text x="40" y="98" text-anchor="end" style="font-size:9.5px">s'inscrit</text>
+        <path class="ar" d="M88 116V72" marker-end="url(#arw)"/>
+        <text x="94" y="98" style="font-size:9.5px">« c'est l'heure »</text>
+
+        <text class="t-a" x="246" y="14" style="fill:var(--ink-3)">BINÔME · BACKEND (SIMULÉ)</text>
+        <rect class="bx2" x="246" y="24" width="208" height="140" rx="5"/>
+        <rect class="bx" x="262" y="38" width="176" height="34" rx="5" style="stroke:var(--ink-3)"/>
+        <text class="t-b" x="350" y="59" text-anchor="middle">Cache par configuration</text>
+        <rect class="bx" x="262" y="116" width="176" height="34" rx="5" style="stroke:var(--ink-3)"/>
+        <text class="t-b" x="350" y="137" text-anchor="middle">Service tiers (météo…)</text>
+        <path class="ar" d="M350 74V114" marker-end="url(#arw)"/>
+        <text x="356" y="98" style="font-size:9.5px">seulement si trop vieux</text>
+
+        <path class="ar" d="M128 40H260" marker-end="url(#arw)"/>
+        <text class="t-m" x="193" y="34" text-anchor="middle">GET …/widgets/3/data</text>
+        <path class="ar" d="M260 60H128" marker-end="url(#arw)"/>
+        <text class="t-m" x="193" y="74" text-anchor="middle">données + heure</text>
+        <text x="6" y="184" style="font-size:9.5px">Deux cartes avec les mêmes réglages partagent une seule lecture du service.</text>
+      </svg>
+      <figcaption>À gauche, ce que j'ai écrit. À droite, le travail de mon binôme, remplacé ici par un faux serveur.</figcaption>
+    </figure>
+
+    <p>Le déplacement est un échange : la carte lâchée prend la place de celle qu'elle recouvre, les autres ne bougent pas. Le frontend envoie ensuite deux <code>PATCH</code>, l'un après l'autre, pour enregistrer les deux nouvelles positions.</p>
+
+    <h3>Nos choix techniques</h3>
+    <p>Pour chaque couche du frontend, nous avons essayé trois outils avec un petit prototype avant de choisir : Next.js, Vite + React ou SvelteKit ; Tailwind, CSS Modules ou styled-components ; dnd-kit, react-beautiful-dnd ou le glisser-déposer natif du navigateur. Le glisser-déposer natif ne marche pas sur un écran tactile, et react-beautiful-dnd n'est plus maintenu. Nous avons donc pris dnd-kit.</p>
+
+    <h3>Ce qui est repris de mon code</h3>
+    <ul>
+      <li>Les 11 widgets des 6 services, avec leurs paramètres, leurs libellés, leurs valeurs par défaut et leurs bornes.</li>
+      <li>Les règles de saisie du formulaire et le rythme entre 10 secondes et 24 heures.</li>
+      <li>Le Timer central, l'affichage de chaque widget, le menu, le plein écran.</li>
+      <li>L'échange de cartes, à la souris (après 4 px), au doigt (après 200 ms d'appui) et au clavier ; la touche Retour arrière supprime la carte qui a le focus.</li>
+    </ul>
+
+    <h3>Ce qui est simulé</h3>
+    <ul>
+      <li>Le backend. Le faux serveur garde les mêmes routes, les mêmes contrôles, les mêmes codes d'erreur et la même règle de cache que le vrai. Dans le vrai projet, c'est le Timer du serveur qui remplit le cache ; ici, il se remplit au moment de la lecture.</li>
+      <li>Les données. La météo, les dépôts « atelier-nord », les titres, les mails et les taux sont inventés. Ils bougent plus vite que dans la réalité pour que l'on voie les rafraîchissements.</li>
+      <li>La sauvegarde. Dans le vrai projet, le tableau est gardé en base de données, par utilisateur. Ici, il est gardé dans votre navigateur.</li>
+    </ul>
+
+    <h3>Ce que j'ai ajouté pour cette page</h3>
+    <ul>
+      <li>Le compte à rebours et la petite barre sous chaque carte, le journal des appels, les compteurs.</li>
+      <li>Les tableaux d'exemple, les valeurs proposées sous les champs, le bouton « Panne météo ».</li>
+    </ul>
+    <p style="margin-top:.9em">Ne sont pas montrés ici : la création de compte, la connexion, le lien avec un compte GitHub ou Google, la page Services, le panneau d'administration, le thème clair du tableau et la position sur l'horloge.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>L'écran d'une équipe produit</h3><p>Les derniers commits, les tickets ouverts, les mails et la météo du bureau sur un seul écran. Au point du matin, tout le monde regarde la même chose.</p></div>
+    <div><h3>La veille sans dix onglets</h3><p>Un flux RSS par concurrent ou par sujet, une recherche par mot-clé sur Hacker News. On voit ce qui est nouveau d'un coup d'œil.</p></div>
+    <div><h3>Des chiffres externes à portée de main</h3><p>Un service achats ou export suit ses taux de change avec leur historique. Chaque widget a son rythme, ce qui évite d'interroger trop souvent les services payants.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Aucun appel réseau : les données sont fictives et calculées dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interstonar — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Lancez une roche dans l'espace : le programme calcule sa trajectoire pas à pas sous l'attraction des planètes et annonce la collision.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+/* ───── propre à cette page ───── */
+.stage.is{grid-template-columns:minmax(0,1fr) minmax(0,390px)}
+@media (max-width:980px){
+  .stage.is{grid-template-columns:minmax(0,1fr)}
+  .stage.is .stage__side{box-shadow:inset 0 1px 0 var(--stage-line)}
+}
+.is-view{position:relative; background:#0C0A08; border-radius:3px; overflow:hidden; box-shadow:0 0 0 1px var(--stage-line)}
+.is-view canvas{width:100%; aspect-ratio:16/10; border-radius:0; touch-action:none; cursor:move; user-select:none; -webkit-user-select:none}
+@media (max-width:600px){ .is-view canvas{aspect-ratio:1/1} }
+.is-tools{position:absolute; top:.5rem; right:.5rem; display:flex; gap:.3rem; flex-wrap:wrap; justify-content:flex-end}
+.is-tools button{
+  font:inherit; font-size:.74rem; line-height:1; cursor:pointer; min-width:1.9rem; height:1.9rem; padding:0 .5rem;
+  color:var(--stage-ink-2); background:rgba(21,18,14,.82); border:1px solid var(--stage-line); border-radius:4px;
+}
+.is-tools button:hover{color:var(--gold); border-color:var(--gold)}
+.is-tools button[aria-pressed="true"]{color:#1A1611; background:var(--gold); border-color:var(--gold)}
+.is-tools button:focus-visible,.chip:focus-visible,.is-check input:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.is-tools i{width:.3rem}
+.is-hint{margin:.7rem 0 1rem; font-size:.8rem !important; color:var(--stage-ink-3) !important}
+.is-stats .stat b.is-small{font-size:1.15rem; line-height:1.3; padding-top:.3rem}
+.is-chart{margin-top:1.2rem}
+.is-chart h3{font-family:inherit; font-weight:600; font-size:.82rem; margin:0 0 .15rem}
+.is-chart p{font-size:.76rem; color:var(--stage-ink-3); margin:0 0 .5rem}
+.is-chart canvas{width:100%; height:130px; background:#0C0A08; box-shadow:0 0 0 1px var(--stage-line)}
+.is-scenes{display:flex; flex-direction:column; gap:.9rem; margin-top:1.4rem; padding-top:1.2rem; box-shadow:inset 0 1px 0 var(--stage-line)}
+.is-group{display:flex; flex-direction:column; gap:.5rem}
+.is-group > span{font-size:.72rem; color:var(--stage-ink-3); letter-spacing:.04em}
+.is-note{font-size:.82rem !important; min-height:2.6em}
+.is-cmd input{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.74rem}
+.is-grid{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem}
+.is-grid .field input{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.76rem; padding:.42rem .45rem}
+.is-sub{font-size:.72rem; color:var(--stage-ink-3); letter-spacing:.04em; margin-bottom:-.6rem}
+.is-check{display:flex; gap:.55rem; align-items:flex-start; font-size:.8rem; color:var(--stage-ink-2); cursor:pointer}
+.is-check input{accent-color:var(--gold); margin-top:.2rem}
+.is-filebar{display:flex; align-items:baseline; justify-content:space-between; gap:.6rem; flex-wrap:wrap}
+.is-filebar .mono{font-size:.72rem; color:var(--stage-ink-3)}
+.is-file textarea{height:11rem; white-space:pre; overflow:auto; overflow-wrap:normal}
+.is-actions{display:flex; flex-wrap:wrap; gap:.6rem; align-items:center}
+.is-term{height:15rem; font-size:.74rem}
+.chip:disabled{opacity:.4; cursor:not-allowed}
+.is-schema{display:block; width:100%; height:auto; max-width:440px; margin:1.2rem 0 .4rem; color:var(--ink-2)}
+.is-schema text{font-family:"Instrument Sans",system-ui,sans-serif; font-size:12px; fill:var(--ink-2)}
+.is-schema .a{stroke:var(--accent); fill:none}
+.is-schema .af{fill:var(--accent)}
+.is-list{margin:0 0 1rem; padding-left:1.1rem; color:var(--ink-2); max-width:60ch}
+.is-list li{margin-bottom:.45em}
+.demo-cols h3{font-size:1rem; margin:1.4rem 0 .5rem}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-CNA-400 · interstonar</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Calcul numérique</span>
+  <h1>Interstonar</h1>
+  <p class="demo-hero__lede">Un programme qui lance une roche dans l'espace et calcule où elle va. En mode global, des astres l'attirent et il annonce la collision. En mode local, la roche file en ligne droite vers des formes simples et il dit laquelle elle touche.</p>
+  <p class="demo-origin">Le projet d'origine est écrit en C++, à trois. Cette page en est une version web : les mêmes calculs, le même format de fichier et la même sortie texte, réécrits en JavaScript pour tourner dans votre navigateur.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage is" id="is-stage">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <button class="btn" type="button" id="is-play">Lancer</button>
+        <button class="btn btn--ghost" type="button" id="is-step">Un pas</button>
+        <button class="btn btn--ghost" type="button" id="is-end">Tout afficher</button>
+        <span class="stage__status" role="status" id="is-status">Prêt</span>
+      </div>
+      <div class="is-view">
+        <canvas id="is-canvas" role="img" aria-label="Vue de la scène : les corps, la roche et sa trajectoire"></canvas>
+        <div class="is-tools">
+          <button type="button" data-plane="xy" aria-pressed="true" title="Vue de dessus (x, y)">XY</button>
+          <button type="button" data-plane="xz" aria-pressed="false" title="Vue de côté (x, z)">XZ</button>
+          <button type="button" data-plane="yz" aria-pressed="false" title="Vue de côté (y, z)">YZ</button>
+          <i></i>
+          <button type="button" id="is-zin" aria-label="Zoomer">+</button>
+          <button type="button" id="is-zout" aria-label="Dézoomer">−</button>
+          <button type="button" id="is-fit">Recentrer</button>
+        </div>
+      </div>
+      <p class="is-hint">Tirez la pointe de la flèche pour changer la vitesse, le rond pour déplacer le départ. Glissez ailleurs pour déplacer la vue ; molette ou deux doigts pour zoomer.</p>
+      <div class="stats is-stats">
+        <div class="stat"><b id="is-s1">–</b><span id="is-l1">pas calculés</span></div>
+        <div class="stat"><b id="is-s2">–</b><span id="is-l2">temps simulé</span></div>
+        <div class="stat"><b id="is-s3" class="is-small">–</b><span id="is-l3">résultat</span></div>
+        <div class="stat"><b id="is-s4">–</b><span id="is-l4">écart d'énergie</span></div>
+      </div>
+      <div class="is-chart">
+        <h3 id="is-ctitle">Énergie de la roche, écart par rapport au départ</h3>
+        <p id="is-cnote">Avec un calcul exact, la courbe resterait à zéro. Mesure ajoutée par cette page.</p>
+        <canvas id="is-chart" role="img" aria-label="Courbe au fil des pas"></canvas>
+      </div>
+      <div class="is-scenes">
+        <span class="label">Lancements prêts</span>
+        <p class="is-note" id="is-note"></p>
+        <div class="is-group">
+          <span>Mode global : scènes écrites pour cette page (Terre et Lune : valeurs de la NASA)</span>
+          <div class="chips" id="is-chips-global"></div>
+        </div>
+        <div class="is-group">
+          <span>Mode local : les deux fichiers de test du projet, copiés tels quels</span>
+          <div class="chips" id="is-chips-repo"></div>
+        </div>
+        <div class="is-group">
+          <span>Mode local : une scène écrite pour cette page</span>
+          <div class="chips" id="is-chips-local"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stage__side">
+      <span class="label">Ligne de commande</span>
+      <label class="field is-cmd">La commande, comme dans un terminal (Entrée pour lancer)
+        <input type="text" id="is-cmd" spellcheck="false" autocomplete="off" autocapitalize="off">
+      </label>
+      <span class="is-sub">Position de départ (Px Py Pz) et vitesse (Vx Vy Vz)</span>
+      <div class="is-grid">
+        <label class="field">Px<input type="text" inputmode="decimal" id="is-px" autocomplete="off"></label>
+        <label class="field">Py<input type="text" inputmode="decimal" id="is-py" autocomplete="off"></label>
+        <label class="field">Pz<input type="text" inputmode="decimal" id="is-pz" autocomplete="off"></label>
+        <label class="field">Vx<input type="text" inputmode="decimal" id="is-vx" autocomplete="off"></label>
+        <label class="field">Vy<input type="text" inputmode="decimal" id="is-vy" autocomplete="off"></label>
+        <label class="field">Vz<input type="text" inputmode="decimal" id="is-vz" autocomplete="off"></label>
+      </div>
+      <span class="is-sub" id="is-dlabel">Pas de temps, en secondes (option -d)</span>
+      <div class="chips" id="is-deltas"></div>
+      <label class="is-check"><input type="checkbox" id="is-ref" checked><span>Tracer en pointillé le même calcul avec un pas 50 fois plus petit (ajout de cette page, pour voir l'erreur)</span></label>
+
+      <label class="field is-file">
+        <span class="is-filebar"><span>Fichier de scène, modifiable</span><span class="mono" id="is-fname"></span></span>
+        <textarea id="is-src" spellcheck="false" autocomplete="off" autocapitalize="off" wrap="off"></textarea>
+      </label>
+      <div class="is-actions">
+        <button class="btn btn--ghost" type="button" id="is-reset">Remettre le fichier d'origine</button>
+      </div>
+      <span class="is-sub">Sortie du programme</span>
+      <div class="term is-term" id="is-term" tabindex="0" aria-label="Sortie texte du programme"></div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Regardez le tir vers la Lune.</b> La roche part de la Terre. À droite, le programme écrit sa position à chaque pas, puis « Collision between rock and Lune ».</span></li>
+      <li><span><b>Changez le pas de temps.</b> Cliquez sur 600. Le même tir retombe sur la Terre : le pas est trop grand, le calcul se trompe. La courbe d'énergie le montre.</span></li>
+      <li><span><b>Passez à « Mise en orbite ».</b> Avec un pas de 10 s, la roche s'éloigne en spirale du cercle en pointillé. Avec un pas de 1 s, elle le suit.</span></li>
+      <li><span><b>Tirez la flèche.</b> Attrapez sa pointe et raccourcissez-la : la roche ralentit et s'écrase sur la Terre. Les six nombres de la commande suivent votre geste.</span></li>
+      <li><span><b>Essayez le mode local.</b> Cliquez sur « À travers l'anneau ». Chaque cercle est la distance libre autour de la roche : elle avance d'autant, jusqu'à toucher.</span></li>
+    </ol>
+  </div>
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>Le programme lit un fichier qui décrit la scène, puis six nombres : où part la roche, et à quelle vitesse. Il a deux modes.</p>
+    <h3>Mode global : la gravité, pas à pas</h3>
+    <svg class="is-schema" viewBox="0 0 400 190" role="img" aria-label="Schéma d'un pas de calcul : la roche avance tout droit selon sa vitesse, puis sa vitesse est tirée vers l'astre.">
+      <circle cx="330" cy="150" r="26" fill="none" stroke="currentColor" stroke-width="1.2"/>
+      <text x="312" y="154">astre</text>
+      <circle cx="40" cy="120" r="4" fill="currentColor"/>
+      <circle cx="170" cy="62" r="4" fill="currentColor"/>
+      <line x1="40" y1="120" x2="163" y2="65" stroke="currentColor" stroke-width="1.3"/>
+      <path d="M163 65l-9 0 4 8z" fill="currentColor"/>
+      <line class="a" x1="40" y1="120" x2="92" y2="126" stroke-width="1.3" stroke-dasharray="4 3"/>
+      <path class="af" d="M97 127l-8-5-1 9z"/>
+      <line x1="170" y1="62" x2="280" y2="30" stroke="currentColor" stroke-width="1" stroke-dasharray="2 4"/>
+      <line class="a" x1="170" y1="62" x2="286" y2="50" stroke-width="1.5"/>
+      <path class="af" d="M292 49l-9-4 1 9z"/>
+      <text x="8" y="142">position</text>
+      <text x="8" y="46">1. elle avance : vitesse × pas</text>
+      <text x="30" y="160">2. l'astre tire la roche</text>
+      <text x="196" y="80">3. nouvelle vitesse</text>
+      <text x="230" y="22">sans gravité</text>
+    </svg>
+    <ol class="is-list">
+      <li><b>Avancer.</b> La roche se déplace en ligne droite pendant un pas de temps, à sa vitesse actuelle.</li>
+      <li><b>Corriger la vitesse.</b> Chaque astre l'attire selon la loi de Newton : plus il est lourd et proche, plus il tire. La vitesse change d'autant.</li>
+      <li><b>Vérifier.</b> Si la roche est à l'intérieur d'un astre, le programme écrit « Collision » et « Mission success ». Après 1000 pas sans collision : « Mission failure ».</li>
+    </ol>
+    <p>Cette méthode s'appelle Euler explicite. Elle est simple, mais elle suppose que rien ne change pendant un pas. Plus le pas est grand, plus l'erreur s'accumule. C'est ce que montrent la courbe d'énergie et le tracé en pointillé.</p>
+    <p>Avant de calculer, deux astres qui se touchent sont réunis en un seul : les masses s'ajoutent, les volumes aussi, et le nom devient « A-B ».</p>
+    <h3>Mode local : avancer sans rien traverser</h3>
+    <p>Ici il n'y a pas de gravité. La roche va tout droit vers des formes : sphère, cylindre, boîte, anneau. Pour chaque forme, une formule donne la distance entre la roche et sa surface. La roche avance de la plus petite de ces distances : elle est sûre de ne rien traverser. Elle recommence, jusqu'à être à moins de 0,1 d'une forme (touchée), à plus de 1000 de tout (sortie de scène), ou au bout de 1000 pas.</p>
+    <h3>Ce qui vient de moi, ce qui vient de l'équipe</h3>
+    <p>Nous étions trois. J'ai posé la structure du programme en C++ : les vecteurs, la description d'un corps, la lecture du fichier de scène, la lecture de la ligne de commande et le point d'entrée qui choisit le mode. Mes deux coéquipiers ont écrit la boucle du mode global et celle du mode local.</p>
+    <h3>Ce qui change par rapport au C++</h3>
+    <p>Le programme d'origine n'affiche que du texte. La vue, la flèche, le zoom, la courbe d'énergie, la distance tracée en mode local et le tracé de comparaison sont des ajouts de cette page. La sortie texte, elle, est la même à la lettre : je l'ai comparée à celle du vrai programme sur plus de 3000 lancements.</p>
+    <p>Une limite du projet, reprise telle quelle : en mode global, les astres restent immobiles. Leur vitesse (<span class="mono">direction</span>) est lue dans le fichier, mais elle ne sert qu'au moment d'une fusion. Seule la roche bouge.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Choisir un pas de calcul</h3><p>Toute simulation avance par pas : mécanique, thermique, finance. Un pas trop grand donne un résultat faux sans prévenir. Suivre une grandeur qui doit rester constante, comme ici l'énergie, permet de le voir.</p></div>
+    <div><h3>Détecter un contact</h3><p>Les formules de distance du mode local servent à savoir si un objet en touche un autre : un bras de robot et un obstacle, une pièce et son logement, un personnage et un mur.</p></div>
+    <div><h3>Calculs lancés par script</h3><p>Une scène dans un fichier, des paramètres sur la ligne de commande, un résultat en texte : on peut lancer des centaines de cas à la suite et comparer les sorties automatiquement.</p></div>
+    <div><h3>Ce que ce projet montre</h3><p>Du C++ orienté objet en équipe, un lecteur de fichier écrit à la main, des maths appliquées, et le réflexe de vérifier un calcul plutôt que de le croire.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="scenes.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>

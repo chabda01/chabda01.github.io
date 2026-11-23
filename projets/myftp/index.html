@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>myFTP — démo · Chabda Gbemetonou</title>
+<meta name="description" content="Un serveur FTP à tester dans le navigateur : tapez les commandes, suivez les deux canaux et voyez deux clients servis en même temps.">
+<meta name="theme-color" content="#120F0B">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23100D0A'/%3E%3Cpath d='M16 7l9 18H7z' fill='%23E9A855'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..600;1,400..600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="../../assets/style.css">
+<link rel="stylesheet" href="../demo.css">
+<style>
+.ftp-mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.sim-note{margin:-.2rem 0 1rem; font-size:.8rem !important; color:var(--stage-ink-3) !important}
+
+/* schéma des connexions */
+.net{display:grid; grid-template-columns:minmax(0,1fr) auto; margin-bottom:1.1rem}
+.net__rows{display:flex; flex-direction:column; gap:.7rem; min-width:0}
+.net__row{display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; transition:opacity .3s}
+.net__row.is-off{opacity:.4}
+.net__row[hidden]{display:none}
+.node{
+  padding:.55rem .7rem; border-radius:4px; font-size:.76rem; font-weight:600; line-height:1.3; text-align:center;
+  color:var(--stage-ink); background:rgba(255,255,255,.04); box-shadow:inset 0 0 0 1px var(--stage-line);
+}
+.node small{display:block; font-weight:400; font-size:.64rem; color:var(--stage-ink-3)}
+.node--srv{display:flex; flex-direction:column; justify-content:center; box-shadow:inset 0 0 0 1px rgba(233,168,85,.45)}
+.wires{display:flex; flex-direction:column; gap:.45rem; min-width:0}
+.wire span{
+  display:block; padding:0 .6rem 2px; font-size:.64rem; color:var(--stage-ink-3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:color .25s;
+}
+.wire i{display:block; position:relative; height:2px; background:rgba(233,168,85,.5)}
+.wire--data i{height:6px; background:repeating-linear-gradient(90deg,var(--stage-line) 0 6px,transparent 6px 11px)}
+.wire--data.is-open i{background:repeating-linear-gradient(90deg,rgba(127,183,126,.65) 0 6px,transparent 6px 11px)}
+.wire--data.is-open span{color:var(--ok)}
+.wire--data.is-busy i{background:rgba(127,183,126,.2)}
+.wire--data i b{
+  position:absolute; inset:0 auto 0 0; width:0;
+  background:repeating-linear-gradient(90deg,var(--ok) 0 6px,rgba(127,183,126,.45) 6px 11px);
+  background-size:22px 100%; animation:ftp-flow .5s linear infinite;
+}
+.wire--data.is-busy span{color:var(--ok)}
+.wire.is-hot span{color:var(--gold)}
+.pkt{position:absolute; top:-3px; left:0; width:8px; height:8px; margin-left:-4px; border-radius:50%; background:var(--gold); animation:ftp-go .14s linear both}
+.pkt--back{animation-name:ftp-back}
+@keyframes ftp-go{from{left:0}to{left:100%}}
+@keyframes ftp-back{from{left:100%}to{left:0}}
+@keyframes ftp-flow{to{background-position:22px 0}}
+@media (prefers-reduced-motion:reduce){.pkt{display:none}.wire--data i b{animation:none}}
+
+/* terminaux */
+.clients{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr)); gap:1rem}
+.cli{display:flex; flex-direction:column; gap:.6rem; min-width:0; padding:0; margin:0}
+.cli[hidden]{display:none}
+.cli__head{display:flex; align-items:center; gap:.6rem; font-size:.86rem; font-weight:600}
+.cli__head span{font-weight:400; font-size:.68rem; color:var(--stage-ink-3)}
+.cli__head .chip{margin-left:auto}
+.cli .term{height:270px; font-size:.74rem}
+.term div{min-height:1.6em}
+.term .t-data{color:#A9C7D8; padding-left:.8rem; box-shadow:inset 2px 0 0 rgba(169,199,216,.35)}
+.term button.t-save{
+  font:inherit; cursor:pointer; color:var(--gold); background:none; border:0; padding:0;
+  text-decoration:underline; text-underline-offset:3px;
+}
+.cli__in{display:flex; align-items:center; gap:.5rem}
+.cli__in span{font-size:.78rem; color:var(--gold)}
+.cli__in input{
+  flex:1; min-width:0; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:16px;
+  color:var(--stage-ink); background:#0F0D0A; border:1px solid var(--stage-line); border-radius:4px; padding:.45rem .6rem;
+}
+.cli__in input:focus-visible{outline:2px solid var(--gold); outline-offset:2px}
+.cli__in .btn{padding:.5rem .9rem}
+.cstate{margin:0; display:grid; grid-template-columns:auto minmax(0,1fr); gap:.25rem .8rem; font-size:.72rem;
+  padding:.7rem .8rem; border-radius:4px; background:rgba(255,255,255,.035); box-shadow:inset 0 0 0 1px var(--stage-line)}
+.cstate dt{color:var(--stage-ink-3)}
+.cstate dd{margin:0; color:var(--stage-ink); overflow-wrap:anywhere}
+.cstate dd em{font-style:normal; color:var(--stage-ink-3)}
+.cstate__title{grid-column:1/-1; font-family:"Instrument Sans",system-ui,sans-serif; font-size:.64rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--stage-ink-3)}
+
+/* colonne serveur */
+.srv-cmd{font-size:.72rem; color:var(--stage-ink-2); overflow-wrap:anywhere}
+.tree{margin:0; padding:0; list-style:none; font-size:.72rem; line-height:1.75; color:var(--stage-ink-2)}
+.tree ul{margin:0; padding:0 0 0 .9rem; list-style:none; box-shadow:inset 1px 0 0 var(--stage-line)}
+.tree li > span{display:flex; gap:.6rem; justify-content:space-between}
+.tree .is-dir{color:var(--stage-ink)}
+.tree small{font-size:inherit; color:var(--stage-ink-3); white-space:nowrap}
+.tree .is-new > span{color:var(--ok)}
+.tree__name{overflow-wrap:anywhere; min-width:0}
+.loop{height:300px; font-size:.68rem; line-height:1.55; padding:.7rem .8rem}
+.loop .t-live{color:var(--ok)}
+.side-note{font-size:.74rem !important; color:var(--stage-ink-3) !important}
+
+/* explications */
+.seq{display:block; width:100%; max-width:430px; height:auto; margin:.4rem 0 1.2rem; color:var(--ink-2)}
+.seq text{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:10.5px; fill:currentColor}
+.seq .seq-h{font-family:"Instrument Sans",system-ui,sans-serif; font-size:12px; font-weight:600; fill:var(--ink)}
+.seq .seq-data{fill:var(--accent)}
+.codes{margin:0 0 1em; padding:0; list-style:none; color:var(--ink-2); font-size:.95rem}
+.codes li{display:grid; grid-template-columns:3.2rem 1fr; gap:.6rem; padding:.3rem 0; box-shadow:inset 0 -1px 0 var(--rule)}
+.codes b{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-weight:400; font-size:.85rem; color:var(--accent)}
+.demo-cols code,.steps code{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:.84em; padding:.08em .35em; border-radius:3px; background:var(--wash); color:var(--ink)}
+.demo-cols h3{font-size:1rem; margin:1.4rem 0 .4rem}
+@media (max-width:520px){
+  .stage__bar .btn{flex:1 1 100%; justify-content:center}
+  .stage__status{margin-left:0}
+  .node{padding:.5rem .5rem; font-size:.7rem}
+}
+</style>
+</head>
+<body class="demo">
+
+<div class="demo-top">
+  <div class="wrap demo-top__in">
+    <a class="demo-top__back" href="../../#work"><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13 8H3M7 4L3 8l4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Retour à la bibliothèque</a>
+    <span class="demo-top__code mono">G-NWP-400 · myftp</span>
+  </div>
+</div>
+
+<main>
+<section class="wrap demo-hero">
+  <span class="label">Rayon · Systèmes, réseau et concurrence</span>
+  <h1>myFTP</h1>
+  <p class="demo-hero__lede">Un serveur de fichiers qui parle le protocole FTP (RFC&nbsp;959). Connectez-vous, parcourez les dossiers, téléchargez et déposez des fichiers. Chaque client est servi sans bloquer les autres.</p>
+  <p class="demo-origin">Le projet d'origine est en C. Un navigateur ne peut pas ouvrir de connexion TCP brute&nbsp;: cette page fait donc tourner une version du serveur réécrite en JavaScript, avec un réseau simulé. Rien ne sort de votre navigateur.</p>
+</section>
+
+<section class="wrap demo-stage">
+  <div class="stage">
+    <div class="stage__main">
+      <div class="stage__bar">
+        <button class="btn" type="button" id="play">Jouer une session complète</button>
+        <button class="btn btn--ghost" type="button" id="duo">Tester deux clients en même temps</button>
+        <button class="btn btn--ghost" type="button" id="second" aria-pressed="false">Ouvrir un deuxième client</button>
+        <button class="btn btn--ghost" type="button" id="reset">Remettre à zéro</button>
+        <span class="stage__status" role="status" id="status">Prêt</span>
+      </div>
+      <p class="sim-note">Réseau simulé&nbsp;: les délais et le débit sont ralentis exprès, pour qu'on voie passer les échanges.</p>
+
+      <div class="net" aria-hidden="true">
+        <div class="net__rows" id="net"></div>
+        <div class="node node--srv">Serveur<small class="ftp-mono">myftp</small><small class="ftp-mono">port 4242</small></div>
+      </div>
+
+      <div class="clients" id="clients"></div>
+      <input type="file" id="upload" hidden>
+    </div>
+
+    <div class="stage__side">
+      <div>
+        <span class="label">Le serveur</span>
+        <p class="srv-cmd ftp-mono">$ ./myftp 4242 /srv/ftp</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="st-clients">0</b><span>clients connectés</span></div>
+        <div class="stat"><b id="st-xfer">0</b><span>transferts en cours</span></div>
+      </div>
+      <div>
+        <span class="label">Fichiers du serveur</span>
+        <p class="side-note">Données d'exemple fictives.</p>
+        <ul class="tree ftp-mono" id="tree"></ul>
+      </div>
+      <div>
+        <span class="label">Boucle du serveur</span>
+        <p class="side-note">Ce que fait le serveur, ligne par ligne.</p>
+        <div class="term loop" id="loop" role="log" aria-label="Journal de la boucle du serveur" tabindex="0"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="wrap demo-cols">
+  <div>
+    <h2>Comment tester</h2>
+    <ol class="steps">
+      <li><span><b>Connectez-vous.</b> Tapez <code>USER Anonymous</code> puis <code>PASS</code> (le mot de passe est vide), ou cliquez sur «&nbsp;Connexion&nbsp;». Le serveur répond 331, puis 230.</span></li>
+      <li><span><b>Listez le dossier.</b> Cliquez sur «&nbsp;Lister&nbsp;». <code>PASV</code> ouvre le canal de données, <code>LIST</code> y envoie la liste. Sur le schéma, le second trait passe au vert.</span></li>
+      <li><span><b>Téléchargez et déposez.</b> «&nbsp;Télécharger un CSV&nbsp;» affiche le fichier et propose de l'enregistrer. «&nbsp;Envoyer un fichier&nbsp;» dépose un de vos fichiers dans <code>depot/</code>. Il reste dans votre navigateur.</span></li>
+      <li><span><b>Lancez deux clients.</b> Cliquez sur «&nbsp;Tester deux clients en même temps&nbsp;». Le client A reçoit un gros fichier, lentement. Le client B continue de recevoir ses réponses.</span></li>
+      <li><span><b>Provoquez une erreur.</b> <code>LIST</code> sans <code>PASV</code> donne 425. Une commande inconnue donne 500. Un mauvais mot de passe donne 530.</span></li>
+    </ol>
+
+    <h3>Les commandes prises en charge</h3>
+    <p><code>USER</code> <code>PASS</code> <code>PWD</code> <code>CWD</code> <code>CDUP</code> <code>LIST</code> <code>RETR</code> <code>STOR</code> <code>DELE</code> <code>PASV</code> <code>PORT</code> <code>HELP</code> <code>NOOP</code> <code>QUIT</code></p>
+  </div>
+
+  <div>
+    <h2>Comment ça marche</h2>
+    <p>FTP utilise deux connexions. Le <b>canal de contrôle</b> reste ouvert toute la session&nbsp;: le client y envoie des commandes en texte, le serveur y répond. Le <b>canal de données</b> s'ouvre pour un seul transfert (une liste ou un fichier), puis se ferme.</p>
+
+    <svg class="seq" viewBox="0 0 360 292" role="img" aria-label="Schéma d'une session : les commandes et les réponses passent par le canal de contrôle, le fichier passe par le canal de données.">
+      <text class="seq-h" x="40" y="14" text-anchor="middle">Client</text>
+      <text class="seq-h" x="320" y="14" text-anchor="middle">Serveur</text>
+      <g stroke="currentColor" stroke-width="1" opacity=".45">
+        <line x1="40" y1="22" x2="40" y2="286"/><line x1="320" y1="22" x2="320" y2="286"/>
+      </g>
+      <g stroke="currentColor" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M320 40H44m6-4-6 4 6 4"/>
+        <path d="M40 70h276m-6-4 6 4-6 4"/>
+        <path d="M320 100H44m6-4-6 4 6 4"/>
+        <path d="M40 130h276m-6-4 6 4-6 4"/>
+        <path d="M320 160H44m6-4-6 4 6 4"/>
+        <path d="M40 190h276m-6-4 6 4-6 4"/>
+        <path d="M320 220H44m6-4-6 4 6 4"/>
+        <path d="M320 276H44m6-4-6 4 6 4"/>
+      </g>
+      <path d="M320 248H44m7-5-7 5 7 5" fill="none" stroke="var(--accent)" stroke-width="3" stroke-dasharray="7 4" stroke-linejoin="round"/>
+      <text x="180" y="35" text-anchor="middle">220 prêt</text>
+      <text x="180" y="65" text-anchor="middle">USER Anonymous</text>
+      <text x="180" y="95" text-anchor="middle">331 mot de passe ?</text>
+      <text x="180" y="125" text-anchor="middle">PASS</text>
+      <text x="180" y="155" text-anchor="middle">230 identifié</text>
+      <text x="180" y="185" text-anchor="middle">PASV puis RETR fichier</text>
+      <text x="180" y="215" text-anchor="middle">227 port ouvert, 150 j'envoie</text>
+      <text class="seq-data" x="180" y="240" text-anchor="middle">le fichier, sur le canal de données</text>
+      <text x="180" y="271" text-anchor="middle">226 transfert fini</text>
+    </svg>
+
+    <p>Chaque réponse commence par un nombre à trois chiffres. Le premier chiffre suffit pour savoir où on en est&nbsp;:</p>
+    <ul class="codes">
+      <li><b>1xx</b><span>Ça commence, une autre réponse suivra (150).</span></li>
+      <li><b>2xx</b><span>C'est fait (220, 230, 226…).</span></li>
+      <li><b>3xx</b><span>Il manque une information (331&nbsp;: le mot de passe).</span></li>
+      <li><b>4xx</b><span>Refus pour l'instant (425&nbsp;: pas de canal de données).</span></li>
+      <li><b>5xx</b><span>Refus net (500, 530, 550).</span></li>
+    </ul>
+
+    <h3>Pourquoi le serveur ne bloque jamais</h3>
+    <p>Il n'attend jamais un seul client. Avec <code>poll</code>, il demande au système&nbsp;: «&nbsp;qui a quelque chose à dire&nbsp;?&nbsp;». Il lit la ligne, répond, puis repose la question. Pour chaque client, il garde une petite fiche&nbsp;: identifié ou non, dossier courant, mode de données.</p>
+    <p>Dans cette démo, un transfert est confié à un processus à part (<code>fork</code>). La boucle principale revient tout de suite à <code>poll</code>. Un gros fichier chez l'un ne gèle donc pas les autres.</p>
+
+    <h3>Ce qui vient du C, ce qui vient de cette page</h3>
+    <p>Dans le projet en C, j'ai écrit le socle&nbsp;: la socket d'écoute, la boucle <code>poll</code> et la fiche d'état de chaque client (64 clients au plus). Les commandes FTP et leurs réponses, elles, sont écrites ici en JavaScript, d'après la RFC&nbsp;959. Les noms affichés (<code>auth_state</code>, <code>ctrl_fd</code>…) sont ceux du code C.</p>
+  </div>
+</section>
+
+<section class="wrap demo-biz">
+  <h2>À quoi ça sert en entreprise</h2>
+  <div class="demo-biz__grid">
+    <div><h3>Échanger des fichiers entre systèmes</h3><p>Un export de commandes déposé chaque nuit, des factures récupérées par la comptabilité&nbsp;: beaucoup d'échanges passent encore par un serveur de fichiers.</p></div>
+    <div><h3>Servir plusieurs personnes à la fois</h3><p>Une grosse sauvegarde en cours ne doit pas geler les autres utilisateurs. C'est le même problème pour tout service en ligne.</p></div>
+    <div><h3>Suivre une norme écrite</h3><p>Partir d'un document officiel et répondre avec les bons codes, pour que n'importe quel client compatible fonctionne.</p></div>
+    <div><h3>Trouver une panne réseau</h3><p>Savoir ce qu'est un port, une connexion, un mode passif aide à comprendre pourquoi un transfert échoue derrière un pare-feu.</p></div>
+  </div>
+</section>
+
+<div class="wrap demo-next">
+  <a href="../../#work">← Retour à la bibliothèque</a>
+  <a href="../../#contact">Me contacter</a>
+</div>
+</main>
+
+<footer class="wrap">
+  <hr class="rule" style="margin-bottom:2rem">
+  <p>Démo écrite à la main, sans aucune bibliothèque. Tout se calcule dans votre navigateur.</p>
+</footer>
+<script src="core.js" defer></script>
+<script src="demo.js" defer></script>
+</body>
+</html>
